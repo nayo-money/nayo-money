@@ -63,7 +63,8 @@ import {
   Smartphone,
   Zap,
   Tag,
-  Award
+  Award,
+  DollarSign
 } from 'lucide-react';
 
 // --- Firebase Configuration (您的專屬設定) ---
@@ -82,7 +83,6 @@ const db = getFirestore(app);
 const appId = 'nayo-money'; 
 
 // --- Icon Mapping ---
-// For Social Links
 const SOCIAL_ICONS = {
   instagram: { icon: Instagram, label: 'Instagram' },
   facebook: { icon: Facebook, label: 'Facebook' },
@@ -97,7 +97,6 @@ const SOCIAL_ICONS = {
   other: { icon: LinkIcon, label: '其他' },
 };
 
-// For Category Tabs (Available icons for selection)
 const CATEGORY_ICONS = {
   flame: { icon: Flame, label: '火焰 (熱門)' },
   credit: { icon: CreditCard, label: '信用卡' },
@@ -114,7 +113,6 @@ const CATEGORY_ICONS = {
   gift: { icon: Gift, label: '禮物' },
 };
 
-// Default Categories (if none set)
 const DEFAULT_CATEGORIES = [
   { id: 'hot', label: '本月主打', icon: 'flame' },
   { id: 'credit', label: '信用卡', icon: 'credit' },
@@ -137,7 +135,16 @@ const THEME = {
   tagText: '#7D6A65',     
 };
 
-// --- Helper: Image Compression ---
+// --- Helper: URL Fixer ---
+const ensureProtocol = (url) => {
+  if (!url) return '#';
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return 'https://' + url;
+};
+
+// --- Helper: Image Compression (UPDATED: PNG for Transparency) ---
 const compressImage = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -153,7 +160,8 @@ const compressImage = (file) => {
         canvas.height = MAX_WIDTH < img.width ? img.height * scaleSize : img.height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+        // Changed to image/png to support transparency!
+        resolve(canvas.toDataURL('image/png')); 
       };
     };
     reader.onerror = (error) => reject(error);
@@ -182,7 +190,7 @@ const ImageUpload = ({ imageUrl, onImageChange, placeholder = "圖片預覽" }) 
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full h-full">
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -192,35 +200,39 @@ const ImageUpload = ({ imageUrl, onImageChange, placeholder = "圖片預覽" }) 
       />
       
       {imageUrl ? (
-        <div className="relative group rounded-xl overflow-hidden border border-stone-200 bg-white">
-          <img src={imageUrl} alt="Uploaded" className="w-full h-32 object-contain bg-stone-50" />
+        <div className="relative group rounded-xl overflow-hidden border border-stone-200 bg-white h-full">
+          {/* Using object-contain to ensure image fits without cropping */}
+          <img src={imageUrl} alt="Uploaded" className="w-full h-full object-contain bg-stone-50 p-1" />
           <button 
             type="button"
             onClick={() => fileInputRef.current.click()}
             className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white font-bold gap-2"
           >
-            <Edit2 size={20} /> 更換圖片
+            <Edit2 size={20} /> 更換
           </button>
           <button 
             type="button"
-            onClick={() => onImageChange('')}
-            className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+                e.stopPropagation();
+                onImageChange('');
+            }}
+            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
           >
-            <X size={14} />
+            <X size={12} />
           </button>
         </div>
       ) : (
         <button 
           type="button"
           onClick={() => fileInputRef.current.click()}
-          className="w-full h-32 border-2 border-dashed border-stone-300 rounded-xl flex flex-col items-center justify-center text-stone-400 hover:border-[#B6968B] hover:text-[#B6968B] hover:bg-[#B6968B]/5 transition-all gap-2"
+          className="w-full h-full min-h-[80px] border-2 border-dashed border-stone-300 rounded-xl flex flex-col items-center justify-center text-stone-400 hover:border-[#B6968B] hover:text-[#B6968B] hover:bg-[#B6968B]/5 transition-all gap-1"
         >
           {loading ? (
-             <span className="animate-pulse">處理中...</span>
+             <span className="animate-pulse text-xs">...</span>
           ) : (
             <>
-              <Upload size={24} />
-              <span className="text-sm font-medium">點擊上傳圖片</span>
+              <Upload size={16} />
+              <span className="text-[10px] font-medium">{placeholder}</span>
             </>
           )}
         </button>
@@ -298,7 +310,7 @@ const NayoLogo = () => (
   </div>
 );
 
-// --- Component: Social Icon Button (Enhanced) ---
+// --- Component: Social Icon Button ---
 const SocialButton = ({ type, url, label, showLabel, onClick }) => {
   const socialConfig = SOCIAL_ICONS[type] || SOCIAL_ICONS.other;
   const Icon = socialConfig.icon;
@@ -313,8 +325,9 @@ const SocialButton = ({ type, url, label, showLabel, onClick }) => {
     }
   };
 
+  const finalUrl = url ? ensureProtocol(url) : null;
   const Wrapper = url ? 'a' : 'button';
-  const props = url ? { href: url, target: "_blank", rel: "noopener noreferrer" } : { onClick: handleClick };
+  const props = url ? { href: finalUrl, target: "_blank", rel: "noopener noreferrer" } : { onClick: handleClick };
 
   if (showLabel) {
     return (
@@ -360,10 +373,14 @@ const Tab = ({ id, label, iconKey, isActive, onClick }) => {
   );
 };
 
-// --- Component: Link Card ---
+// --- Component: Link Card (Updated Link Behavior) ---
 const LinkCard = ({ link, onEdit, onDelete, isEditing }) => {
   const giftList = typeof link.giftContent === 'string' ? link.giftContent.split('\n').filter(Boolean) : [];
   const conditionList = typeof link.conditions === 'string' ? link.conditions.split('\n').filter(Boolean) : [];
+  const finalUrl = ensureProtocol(link.url);
+
+  const hasBadgeImage = !!link.badgeImageUrl;
+  const hasBadgeValue = !!link.badgeValue;
 
   return (
     <div className="relative group mb-5 bg-white rounded-[24px] shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-white">
@@ -385,14 +402,10 @@ const LinkCard = ({ link, onEdit, onDelete, isEditing }) => {
         </div>
       )}
 
-      <a 
-        href={isEditing ? '#' : link.url} 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className={`block p-5 ${isEditing ? 'cursor-default' : 'cursor-pointer'}`}
-      >
+      {/* Main Content Area (Now just a DIV, not a link) */}
+      <div className="block p-5">
         <div className="flex justify-between items-start mb-3">
-          <div className="flex-1">
+          <div className="flex-1 pr-3">
             <div className="flex flex-wrap gap-2 mb-2">
               {link.bankName && (
                 <span className="px-2 py-1 text-xs font-bold rounded-md" style={{ backgroundColor: THEME.tagBg, color: THEME.tagText }}>
@@ -413,14 +426,27 @@ const LinkCard = ({ link, onEdit, onDelete, isEditing }) => {
             </p>
           </div>
 
-          {link.badgeValue && (
-            <div className="flex flex-col items-center justify-center w-16 h-16 rounded-xl shrink-0 ml-3 shadow-sm border border-stone-100 bg-gradient-to-br from-stone-50 to-stone-100">
-              <div className="text-xs font-bold text-center leading-tight px-1" style={{ color: THEME.textMain }}>
-                {link.badgeValue}
-              </div>
-              <div className="text-[9px] mt-1 px-1.5 py-0.5 rounded-full bg-[#4A3B32] text-white">
-                價值
-              </div>
+          {/* Right Side: Image OR Value Badge */}
+          {(hasBadgeImage || hasBadgeValue) && (
+            <div className="shrink-0 ml-1">
+               {hasBadgeImage ? (
+                 <div className="w-28 h-28 rounded-xl overflow-hidden shadow-md border border-stone-100 bg-white">
+                    <img src={link.badgeImageUrl} alt="Badge" className="w-full h-full object-contain p-1" />
+                 </div>
+               ) : (
+                 <div className="flex flex-col items-center justify-center w-28 h-28 rounded-xl shadow-md border border-stone-100 bg-gradient-to-br from-[#FDFBF7] to-[#F5F0EB]">
+                    <div className="text-base font-bold text-center leading-tight px-1 break-all" style={{ color: THEME.textMain }}>
+                      {!isNaN(link.badgeValue) || /^\d/.test(link.badgeValue) ? (
+                          <span className="text-xl font-extrabold text-[#B6968B]">{link.badgeValue.includes('$') ? link.badgeValue : `$${link.badgeValue}`}</span>
+                      ) : (
+                          link.badgeValue
+                      )}
+                    </div>
+                    <div className="text-[10px] mt-2 px-3 py-0.5 rounded-full bg-[#4A3B32] text-white font-bold tracking-wider">
+                      價值
+                    </div>
+                 </div>
+               )}
             </div>
           )}
         </div>
@@ -429,7 +455,7 @@ const LinkCard = ({ link, onEdit, onDelete, isEditing }) => {
           <div className="rounded-xl p-4 mb-3" style={{ backgroundColor: '#FCF9F7', border: '1px solid #F5EFE9' }}>
             <div className="flex items-center gap-2 mb-2">
               <Gift size={14} className="text-[#B6968B]" />
-              <span className="text-xs font-bold text-[#8C7B75]">首刷好禮</span>
+              <span className="text-xs font-bold text-[#8C7B75]">{link.giftTitle || '首刷好禮'}</span>
             </div>
             
             {link.giftType === 'image' && link.giftImageUrl ? (
@@ -474,19 +500,24 @@ const LinkCard = ({ link, onEdit, onDelete, isEditing }) => {
           </div>
         )}
 
-        <div 
-          className="w-full py-3 rounded-xl text-white font-bold text-center shadow-md flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+        {/* CTA Button (Now this acts as the link) */}
+        <a 
+          href={isEditing ? '#' : finalUrl}
+          target={isEditing ? undefined : "_blank"} 
+          rel="noopener noreferrer"
+          className={`w-full py-3 rounded-xl text-white font-bold text-center shadow-md flex items-center justify-center gap-2 transition-transform active:scale-[0.98] hover:opacity-90 ${isEditing ? 'cursor-default' : 'cursor-pointer'}`}
           style={{ backgroundColor: THEME.primary }}
+          onClick={(e) => isEditing && e.preventDefault()}
         >
-          立即申辦領取
+          立即申辦
           <ExternalLink size={16} />
-        </div>
-      </a>
+        </a>
+      </div>
     </div>
   );
 };
 
-// --- Component: Login Modal ---
+// ... Login Modal (No Changes) ...
 const LoginModal = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -527,7 +558,7 @@ const LoginModal = ({ isOpen, onClose }) => {
             <input 
               type="email" 
               className="input" 
-              placeholder="請輸入您在的Email"
+              placeholder="請輸入您的Email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
@@ -560,7 +591,7 @@ const LoginModal = ({ isOpen, onClose }) => {
   );
 };
 
-// --- Profile Editor Modal (Updated: Categories Manager) ---
+// ... Profile Editor Modal (No Changes) ...
 const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
   const [data, setData] = useState({
     name: 'Nayo 娜攸',
@@ -569,7 +600,7 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
     siteTitle: 'Nayo 娜攸理財', 
     faviconUrl: '', 
     socialLinks: [],
-    categories: [] // New: Custom Categories
+    categories: []
   });
 
   useEffect(() => {
@@ -582,7 +613,6 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
         if (initialData.sponsorUrl) links.push({ id: 'sponsor', type: 'sponsor', url: initialData.sponsorUrl, label: '贊助娜攸', showLabel: true }); 
       }
       
-      // Default Categories if empty
       let cats = initialData.categories;
       if (!cats || cats.length === 0) {
         cats = DEFAULT_CATEGORIES;
@@ -592,12 +622,10 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
     }
   }, [initialData]);
 
-  // Social Links Handlers
   const addSocialLink = () => setData({ ...data, socialLinks: [...data.socialLinks, { id: Date.now().toString(), type: 'instagram', url: '', label: '', showLabel: false }] });
   const updateSocialLink = (index, field, value) => { const newLinks = [...data.socialLinks]; newLinks[index] = { ...newLinks[index], [field]: value }; setData({ ...data, socialLinks: newLinks }); };
   const removeSocialLink = (index) => setData({ ...data, socialLinks: data.socialLinks.filter((_, i) => i !== index) });
 
-  // Category Handlers
   const addCategory = () => setData({ ...data, categories: [...data.categories, { id: `cat-${Date.now()}`, label: '新分類', icon: 'tag' }] });
   const updateCategory = (index, field, value) => { const newCats = [...data.categories]; newCats[index] = { ...newCats[index], [field]: value }; setData({ ...data, categories: newCats }); };
   const removeCategory = (index) => { if(confirm('刪除分類後，該分類下的連結可能無法正常顯示，確定刪除？')) setData({ ...data, categories: data.categories.filter((_, i) => i !== index) }); };
@@ -612,7 +640,6 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
           <button onClick={onClose}><X size={20} /></button>
         </div>
         <div className="p-5 space-y-6">
-           {/* Avatar Upload */}
            <div className="flex items-start gap-4">
             <div className="w-20 h-20 shrink-0">
                <div className="w-20 h-20 rounded-full bg-stone-100 flex items-center justify-center border border-stone-200 overflow-hidden relative">
@@ -642,7 +669,6 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
 
           <hr className="border-stone-100" />
           
-          {/* Website Settings */}
           <div>
             <label className="label flex items-center gap-1 text-[#B6968B]"><Globe size={14}/> 網站顯示設定</label>
             <div className="bg-stone-50 p-4 rounded-xl border border-stone-100 space-y-3">
@@ -666,7 +692,6 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
 
           <hr className="border-stone-100" />
           
-          {/* Category Tabs Manager (New) */}
           <div>
             <div className="flex justify-between items-center mb-2">
                 <label className="label flex items-center gap-1 text-[#B6968B]"><Layout size={14}/> 分類標籤管理 (Tabs)</label>
@@ -697,13 +722,11 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
                         </button>
                     </div>
                 ))}
-                <p className="text-[10px] text-stone-400 mt-1">* ID: {data.categories.map(c => c.id).join(', ')} (請勿頻繁修改分類，以免連結找不到歸屬)</p>
             </div>
           </div>
 
           <hr className="border-stone-100" />
           
-          {/* Social Links Manager */}
           <div>
             <div className="flex justify-between items-center mb-2">
                 <h3 className="font-bold text-[#4A3B32]">社群連結管理</h3>
@@ -776,7 +799,7 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
   );
 };
 
-// ... LinkEditorModal (Updated to use Dynamic Categories) ...
+// ... LinkEditorModal (No Changes) ...
 const LinkEditorModal = ({ isOpen, onClose, onSave, initialData, categories = [] }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -786,7 +809,9 @@ const LinkEditorModal = ({ isOpen, onClose, onSave, initialData, categories = []
     url: '',
     category: 'credit',
     badgeValue: '',
+    badgeImageUrl: '',
     giftType: 'text',
+    giftTitle: '',
     giftImageUrl: '',
     deadline: ''
   });
@@ -802,7 +827,7 @@ const LinkEditorModal = ({ isOpen, onClose, onSave, initialData, categories = []
     } else {
       setFormData({
         title: '', subtitle: '', bankName: '', tag: '', url: '', category: categories[0]?.id || 'hot',
-        badgeValue: '', giftType: 'text', giftImageUrl: '', deadline: ''
+        badgeValue: '', badgeImageUrl: '', giftType: 'text', giftTitle: '', giftImageUrl: '', deadline: ''
       });
       setGiftContentList([]);
       setConditionsList([]);
@@ -860,8 +885,19 @@ const LinkEditorModal = ({ isOpen, onClose, onSave, initialData, categories = []
               <input className="input" placeholder="例如：#網購神卡" value={formData.tag} onChange={e => setFormData({...formData, tag: e.target.value})} />
             </div>
             <div>
-              <label className="label">右上價值標章 (選填)</label>
-              <input className="input" placeholder="例如：$2,200" value={formData.badgeValue} onChange={e => setFormData({...formData, badgeValue: e.target.value})} />
+              <label className="label">右上角圖示/價值 (選填)</label>
+              <div className="flex flex-col gap-2">
+                  <div className="h-28 border border-stone-200 rounded-lg overflow-hidden relative">
+                      <ImageUpload 
+                        imageUrl={formData.badgeImageUrl} 
+                        onImageChange={(base64) => setFormData({...formData, badgeImageUrl: base64})}
+                        placeholder="上傳圖片"
+                      />
+                  </div>
+                  {!formData.badgeImageUrl && (
+                    <input className="input text-sm" placeholder="或輸入文字/金額" value={formData.badgeValue} onChange={e => setFormData({...formData, badgeValue: e.target.value})} />
+                  )}
+              </div>
             </div>
           </div>
 
@@ -872,9 +908,20 @@ const LinkEditorModal = ({ isOpen, onClose, onSave, initialData, categories = []
 
           <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
             <div className="flex justify-between items-center mb-2">
-                 <label className="label mb-0 flex items-center gap-1"><Gift size={14}/> 首刷禮內容 (選填)</label>
+                 <label className="label mb-0 flex items-center gap-1"><Gift size={14}/> 首刷禮區塊設定</label>
             </div>
             
+            {/* Custom Gift Title Input */}
+            <div className="mb-3">
+                <label className="text-[10px] font-bold text-stone-400 block mb-1">區塊標題 (預設：首刷好禮)</label>
+                <input 
+                    className="input w-full py-2 text-sm" 
+                    placeholder="例如：限時加碼" 
+                    value={formData.giftTitle || ''} 
+                    onChange={e => setFormData({...formData, giftTitle: e.target.value})} 
+                />
+            </div>
+
             <div className="flex gap-2 mb-3">
                <button type="button" onClick={() => setFormData({...formData, giftType: 'text'})} className={`flex-1 py-1.5 text-xs rounded border transition-colors ${formData.giftType === 'text' ? 'bg-[#B6968B] text-white border-[#B6968B]' : 'bg-white text-stone-500 hover:bg-stone-100'}`}>條列式文字</button>
                <button type="button" onClick={() => setFormData({...formData, giftType: 'image'})} className={`flex-1 py-1.5 text-xs rounded border transition-colors ${formData.giftType === 'image' ? 'bg-[#B6968B] text-white border-[#B6968B]' : 'bg-white text-stone-500 hover:bg-stone-100'}`}>圖片模式</button>
@@ -931,7 +978,6 @@ export default function App() {
 
   const [links, setLinks] = useState([]);
   const [profile, setProfile] = useState(null);
-  // Filter now uses the category ID
   const [filter, setFilter] = useState('hot'); 
   
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -1026,10 +1072,8 @@ export default function App() {
     await signOut(auth);
   };
 
-  // Determine active categories
   const currentCategories = profile?.categories?.length > 0 ? profile.categories : DEFAULT_CATEGORIES;
 
-  // Ensure filter is valid
   useEffect(() => {
     if (currentCategories.length > 0 && !currentCategories.find(c => c.id === filter)) {
         setFilter(currentCategories[0].id);
@@ -1037,10 +1081,6 @@ export default function App() {
   }, [currentCategories, filter]);
 
   const filteredLinks = useMemo(() => {
-    // If 'hot' is selected, show links marked as 'hot' OR show all if user wants (custom logic can be added)
-    // Here we strictly filter by category ID
-    // However, if we want "Hot" to be a special filter that shows links from ANY category marked as "hot", that requires extra data field.
-    // Assuming simple Category filtering for now based on the request.
     return links.filter(l => l.category === filter);
   }, [links, filter]);
 
@@ -1085,7 +1125,6 @@ export default function App() {
              {profile?.bio || '生活 x 理財 x 貓咪 | 陪你一起變有錢 🤎'}
           </p>
 
-          {/* Social Icons Row (Dynamic) */}
           <div className="flex flex-wrap justify-center gap-3 mb-4">
             {profile?.socialLinks?.map((link, index) => (
                 <SocialButton 
@@ -1098,7 +1137,6 @@ export default function App() {
                 />
             ))}
             
-            {/* Fallback for legacy data */}
             {(!profile?.socialLinks || profile.socialLinks.length === 0) && (
                <>
                  <SocialButton type="instagram" url={profile?.igUrl} />
@@ -1178,7 +1216,7 @@ export default function App() {
         onClose={() => { setLinkModalOpen(false); setEditingLink(null); }}
         onSave={handleSaveLink}
         initialData={editingLink}
-        categories={currentCategories} // Pass dynamic categories to link editor
+        categories={currentCategories} 
       />
       <ProfileEditorModal 
         isOpen={profileModalOpen} 
