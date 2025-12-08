@@ -144,7 +144,7 @@ const ensureProtocol = (url) => {
   return 'https://' + url;
 };
 
-// --- Helper: Image Compression (UPDATED: PNG for Transparency) ---
+// --- Helper: Image Compression ---
 const compressImage = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -160,7 +160,6 @@ const compressImage = (file) => {
         canvas.height = MAX_WIDTH < img.width ? img.height * scaleSize : img.height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        // Changed to image/png to support transparency!
         resolve(canvas.toDataURL('image/png')); 
       };
     };
@@ -201,7 +200,6 @@ const ImageUpload = ({ imageUrl, onImageChange, placeholder = "圖片預覽" }) 
       
       {imageUrl ? (
         <div className="relative group rounded-xl overflow-hidden border border-stone-200 bg-white h-full">
-          {/* Using object-contain to ensure image fits without cropping */}
           <img src={imageUrl} alt="Uploaded" className="w-full h-full object-contain bg-stone-50 p-1" />
           <button 
             type="button"
@@ -356,13 +354,13 @@ const SocialButton = ({ type, url, label, showLabel, onClick }) => {
   );
 };
 
-// --- Component: Tab ---
+// --- Component: Tab (Updated with shrink-0 and robust sizing) ---
 const Tab = ({ id, label, iconKey, isActive, onClick }) => {
-  const Icon = CATEGORY_ICONS[iconKey]?.icon || Flame; // Fallback to Flame
+  const Icon = CATEGORY_ICONS[iconKey]?.icon || Flame; 
   return (
     <button
       onClick={() => onClick(id)}
-      className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold transition-all duration-300 shadow-sm whitespace-nowrap
+      className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold transition-all duration-300 shadow-sm whitespace-nowrap
         ${isActive 
           ? 'bg-[#B6968B] text-white transform scale-105 shadow-md' 
           : 'bg-white text-[#8C7B75] hover:bg-stone-50'}`}
@@ -373,7 +371,7 @@ const Tab = ({ id, label, iconKey, isActive, onClick }) => {
   );
 };
 
-// --- Component: Link Card (Updated Link Behavior) ---
+// --- Component: Link Card ---
 const LinkCard = ({ link, onEdit, onDelete, isEditing }) => {
   const giftList = typeof link.giftContent === 'string' ? link.giftContent.split('\n').filter(Boolean) : [];
   const conditionList = typeof link.conditions === 'string' ? link.conditions.split('\n').filter(Boolean) : [];
@@ -500,7 +498,7 @@ const LinkCard = ({ link, onEdit, onDelete, isEditing }) => {
           </div>
         )}
 
-        {/* CTA Button (Now this acts as the link) */}
+        {/* CTA Button */}
         <a 
           href={isEditing ? '#' : finalUrl}
           target={isEditing ? undefined : "_blank"} 
@@ -558,7 +556,7 @@ const LoginModal = ({ isOpen, onClose }) => {
             <input 
               type="email" 
               className="input" 
-              placeholder="請輸入您的Email"
+              placeholder="請輸入您在 Firebase 設定的 Email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
@@ -1155,7 +1153,7 @@ export default function App() {
         </div>
 
         {/* Dynamic Categories / Tabs */}
-        <div className="sticky top-0 z-40 bg-[#F5F0EB]/95 backdrop-blur-md py-3 px-2 flex overflow-x-auto no-scrollbar gap-2 mb-2 shadow-sm border-b border-white/20">
+        <div className="sticky top-0 z-40 bg-[#F5F0EB]/95 backdrop-blur-md py-3 px-2 flex flex-nowrap overflow-x-auto no-scrollbar gap-2 mb-2 shadow-sm border-b border-white/20 w-full items-center">
           {currentCategories.map(cat => (
               <Tab 
                 key={cat.id} 
