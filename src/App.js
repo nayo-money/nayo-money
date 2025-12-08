@@ -64,7 +64,9 @@ import {
   Zap,
   Tag,
   Award,
-  DollarSign
+  DollarSign,
+  ChevronLeft,  // 新增
+  ChevronRight  // 新增
 } from 'lucide-react';
 
 // --- Firebase Configuration (您的專屬設定) ---
@@ -354,7 +356,7 @@ const SocialButton = ({ type, url, label, showLabel, onClick }) => {
   );
 };
 
-// --- Component: Tab (Updated with shrink-0 and robust sizing) ---
+// --- Component: Tab ---
 const Tab = ({ id, label, iconKey, isActive, onClick }) => {
   const Icon = CATEGORY_ICONS[iconKey]?.icon || Flame; 
   return (
@@ -362,12 +364,88 @@ const Tab = ({ id, label, iconKey, isActive, onClick }) => {
       onClick={() => onClick(id)}
       className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold transition-all duration-300 shadow-sm whitespace-nowrap
         ${isActive 
-          ? 'bg-[#B6968B] text-white transform scale-105 shadow-md' 
+          ? 'bg-[#B6968B] text-white transform scale-105 shadow-md z-10' 
           : 'bg-white text-[#8C7B75] hover:bg-stone-50'}`}
     >
       <Icon size={14} />
       {label}
     </button>
+  );
+};
+
+// --- Component: CategoryTabs (New: Handles Scrolling Arrows) ---
+const CategoryTabs = ({ categories, activeId, onSelect }) => {
+  const scrollRef = useRef(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
+  // Check scroll position to show/hide arrows
+  const checkScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setShowLeftArrow(scrollLeft > 0);
+      // Allow small buffer of 1px for calculation errors
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [categories]);
+
+  const scroll = (direction) => {
+    if (scrollRef.current) {
+      const scrollAmount = 200;
+      scrollRef.current.scrollBy({ 
+        left: direction === 'left' ? -scrollAmount : scrollAmount, 
+        behavior: 'smooth' 
+      });
+    }
+  };
+
+  return (
+    <div className="sticky top-0 z-40 bg-[#F5F0EB]/95 backdrop-blur-md border-b border-white/20">
+      <div className="relative group">
+        {/* Left Arrow (Desktop Only) */}
+        {showLeftArrow && (
+          <button 
+            onClick={() => scroll('left')}
+            className="absolute left-0 top-0 bottom-0 z-20 px-1 bg-gradient-to-r from-[#F5F0EB] to-transparent hidden md:flex items-center justify-center text-[#B6968B] hover:text-[#9A7A6F] transition-opacity"
+          >
+            <ChevronLeft size={24} />
+          </button>
+        )}
+
+        <div 
+          ref={scrollRef}
+          onScroll={checkScroll}
+          className="flex flex-nowrap overflow-x-auto no-scrollbar py-3 px-4 gap-3 w-full items-center scroll-smooth"
+        >
+          {categories.map(cat => (
+              <Tab 
+                key={cat.id} 
+                id={cat.id} 
+                label={cat.label} 
+                iconKey={cat.icon} 
+                isActive={activeId === cat.id} 
+                onClick={onSelect} 
+              />
+          ))}
+        </div>
+
+        {/* Right Arrow (Desktop Only) */}
+        {showRightArrow && (
+          <button 
+            onClick={() => scroll('right')}
+            className="absolute right-0 top-0 bottom-0 z-20 px-1 bg-gradient-to-l from-[#F5F0EB] to-transparent hidden md:flex items-center justify-center text-[#B6968B] hover:text-[#9A7A6F] transition-opacity"
+          >
+            <ChevronRight size={24} />
+          </button>
+        )}
+      </div>
+    </div>
   );
 };
 
@@ -983,10 +1061,17 @@ export default function App() {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
 
-  // --- Dynamic Title & Favicon Update ---
+  // --- Dynamic Title & Favicon & Meta Tags Update ---
   useEffect(() => {
     if (profile) {
-      document.title = profile.siteTitle || 'Nayo 娜攸理財';
+      const title = profile.siteTitle || 'Nayo 娜攸理財';
+      const description = profile.bio || '生活 x 理財 x 貓咪 | 陪你一起變有錢 🤎';
+      const image = profile.avatarUrl || '';
+
+      // 1. Update Title
+      document.title = title;
+
+      // 2. Update Favicon
       let link = document.querySelector("link[rel~='icon']");
       if (!link) {
         link = document.createElement('link');
@@ -996,6 +1081,22 @@ export default function App() {
       if (profile.faviconUrl) {
         link.href = profile.faviconUrl;
       }
+
+      // 3. Update Meta Tags (Open Graph)
+      const setMetaTag = (attrName, attrValue, content) => {
+        let element = document.querySelector(`meta[${attrName}='${attrValue}']`);
+        if (!element) {
+          element = document.createElement('meta');
+          element.setAttribute(attrName, attrValue);
+          document.head.appendChild(element);
+        }
+        element.setAttribute('content', content);
+      };
+
+      setMetaTag('property', 'og:title', title);
+      setMetaTag('property', 'og:description', description);
+      setMetaTag('property', 'og:image', image);
+      setMetaTag('property', 'og:type', 'website');
     }
   }, [profile]);
 
@@ -1153,18 +1254,12 @@ export default function App() {
         </div>
 
         {/* Dynamic Categories / Tabs */}
-        <div className="sticky top-0 z-40 bg-[#F5F0EB]/95 backdrop-blur-md py-3 px-2 flex flex-nowrap overflow-x-auto no-scrollbar gap-2 mb-2 shadow-sm border-b border-white/20 w-full items-center">
-          {currentCategories.map(cat => (
-              <Tab 
-                key={cat.id} 
-                id={cat.id} 
-                label={cat.label} 
-                iconKey={cat.icon} 
-                isActive={filter === cat.id} 
-                onClick={setFilter} 
-              />
-          ))}
-        </div>
+        {/* Uses CategoryTabs component for better desktop scrolling */}
+        <CategoryTabs 
+          categories={currentCategories} 
+          activeId={filter} 
+          onSelect={setFilter} 
+        />
 
         {/* Content List */}
         <div className="px-5 py-4 pb-12 flex-1">
