@@ -3,7 +3,7 @@ import { initializeApp } from "firebase/app";
 import {
   getAuth,
   signInAnonymously,
-  signInWithEmailAndPassword, // 新增：Email 登入功能
+  signInWithEmailAndPassword,
   onAuthStateChanged,
   signOut,
 } from "firebase/auth";
@@ -49,6 +49,7 @@ import {
   LogOut,
   User,
   Key,
+  Globe, // 新增圖示
 } from "lucide-react";
 
 // --- Firebase Configuration (您的專屬設定) ---
@@ -65,6 +66,12 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = "nayo-money";
+
+// --- Admin Credentials (此處僅為預設，實際登入依賴 Firebase Auth) ---
+const ADMIN_CREDENTIALS = {
+  username: "nayo",
+  password: "8888",
+};
 
 // --- Color Palette ---
 const THEME = {
@@ -465,7 +472,7 @@ const LinkCard = ({ link, onEdit, onDelete, isEditing }) => {
   );
 };
 
-// --- Component: Login Modal (Updated to use Firebase Auth) ---
+// --- Component: Login Modal ---
 const LoginModal = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -480,9 +487,7 @@ const LoginModal = ({ isOpen, onClose }) => {
     setError("");
 
     try {
-      // 直接呼叫 Firebase 進行登入
       await signInWithEmailAndPassword(auth, email, password);
-      // 登入成功後，onAuthStateChanged 會自動更新狀態，我們只需要關閉視窗
       onClose();
       setEmail("");
       setPassword("");
@@ -512,7 +517,7 @@ const LoginModal = ({ isOpen, onClose }) => {
             <input
               type="email"
               className="input"
-              placeholder="請輸入您的Email"
+              placeholder="請輸入您在 Firebase 設定的 Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -551,12 +556,14 @@ const LoginModal = ({ isOpen, onClose }) => {
   );
 };
 
-// --- Profile & Link Editor Modals (No Changes Needed) ---
+// --- Profile Editor Modal (Updated for Favicon & Title) ---
 const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
   const [data, setData] = useState({
     name: "Nayo 娜攸",
     bio: "生活 x 理財 x 貓咪 | 陪你一起變有錢 🤎",
     avatarUrl: "",
+    siteTitle: "Nayo 娜攸理財", // 預設標題
+    faviconUrl: "", // 網站小圖示
     igUrl: "",
     email: "",
     blogUrl: "",
@@ -573,12 +580,13 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-          <h2 className="text-lg font-bold">編輯個人檔案 & 社群</h2>
+          <h2 className="text-lg font-bold">編輯個人檔案 & 網站設定</h2>
           <button onClick={onClose}>
             <X size={20} />
           </button>
         </div>
         <div className="p-5 space-y-4">
+          {/* Avatar Upload */}
           <div className="flex items-start gap-4">
             <div className="w-20 h-20 shrink-0">
               <div className="w-20 h-20 rounded-full bg-stone-100 flex items-center justify-center border border-stone-200 overflow-hidden relative">
@@ -623,6 +631,60 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
               onChange={(e) => setData({ ...data, bio: e.target.value })}
             />
           </div>
+
+          <hr className="border-stone-100 my-2" />
+
+          {/* Website Settings */}
+          <div>
+            <label className="label flex items-center gap-1 text-[#B6968B]">
+              <Globe size={14} /> 網站顯示設定
+            </label>
+            <div className="bg-stone-50 p-4 rounded-xl border border-stone-100 space-y-3">
+              <div>
+                <label className="label text-[10px]">
+                  網站標題 (Browser Title)
+                </label>
+                <input
+                  className="input"
+                  placeholder="例如：Nayo 娜攸理財"
+                  value={data.siteTitle}
+                  onChange={(e) =>
+                    setData({ ...data, siteTitle: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="label text-[10px]">
+                  網站小圖示 (Favicon)
+                </label>
+                <div className="flex gap-4 items-center">
+                  <div className="w-10 h-10 border border-stone-200 rounded-lg flex items-center justify-center bg-white overflow-hidden shrink-0">
+                    {data.faviconUrl ? (
+                      <img
+                        src={data.faviconUrl}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-[8px] text-stone-400">無</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <ImageUpload
+                      imageUrl={""}
+                      onImageChange={(base64) =>
+                        setData({ ...data, faviconUrl: base64 })
+                      }
+                      placeholder="上傳 Logo"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-stone-400 mt-1">
+                  建議使用 32x32 或 64x64 的 PNG 圖片
+                </p>
+              </div>
+            </div>
+          </div>
+
           <hr className="border-stone-100" />
           <h3 className="font-bold text-[#4A3B32]">社群連結</h3>
           <div className="grid grid-cols-1 gap-3">
@@ -666,7 +728,7 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
             </div>
           </div>
           <button onClick={() => onSave(data)} className="btn-primary mt-4">
-            儲存個人檔案
+            儲存設定
           </button>
         </div>
       </div>
@@ -674,6 +736,7 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
   );
 };
 
+// ... LinkEditorModal (No Changes Needed) ...
 const LinkEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
   const [formData, setFormData] = useState({
     title: "",
@@ -922,7 +985,6 @@ const LinkEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
 // --- Main App Component ---
 export default function App() {
   const [user, setUser] = useState(null);
-  // isAdmin 不再是 UI 狀態，而是直接根據 User 的身分決定
   const isAdmin = user && !user.isAnonymous;
 
   const [links, setLinks] = useState([]);
@@ -934,27 +996,50 @@ export default function App() {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
 
+  // --- Dynamic Title & Favicon Update ---
   useEffect(() => {
-    // 監聽登入狀態改變
+    if (profile) {
+      // 1. Update Title
+      document.title = profile.siteTitle || "Nayo 娜攸理財";
+
+      // 2. Update Favicon (Find existing or create new)
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "icon";
+        document.getElementsByTagName("head")[0].appendChild(link);
+      }
+
+      // Only update if faviconUrl exists, otherwise keep default (or set to default)
+      if (profile.faviconUrl) {
+        link.href = profile.faviconUrl;
+      }
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      // For persistent guest login if not logged in
+      signInAnonymously(auth).catch((error) =>
+        console.error("Guest login failed", error)
+      );
+    };
+
+    // Listen to Auth State
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
       } else {
-        // 如果使用者登出或第一次進來，自動以「訪客(匿名)」身分登入
-        // 確保大家都能看到資料
-        signInAnonymously(auth).catch((error) =>
-          console.error("Guest login failed", error)
-        );
+        // If logged out, sign in as anonymous immediately
+        initAuth();
       }
     });
     return () => unsubscribe();
   }, []);
 
-  // Fetch Links & Profile (PUBLIC DATA)
+  // Fetch Links & Profile
   useEffect(() => {
-    if (!user) return;
-
-    // Public Data: Everyone can read
+    // We fetch public data regardless of user status (read-only for guests)
     const q = query(
       collection(db, "artifacts", appId, "public", "data", "links"),
       orderBy("createdAt", "desc")
@@ -965,7 +1050,7 @@ export default function App() {
       (snapshot) => {
         setLinks(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
       },
-      (error) => console.error(error)
+      (error) => console.error("Link fetch error:", error)
     );
 
     const profileRef = doc(
@@ -983,6 +1068,7 @@ export default function App() {
         setProfile({
           name: "Nayo 娜攸",
           bio: "生活 x 理財 x 貓咪 | 陪你一起變有錢 🤎",
+          siteTitle: "Nayo 娜攸理財",
         });
     });
 
@@ -990,7 +1076,7 @@ export default function App() {
       unsubLinks();
       unsubProfile();
     };
-  }, [user]);
+  }, []); // Run once on mount (snapshot listeners handle updates)
 
   const handleSaveLink = async (formData) => {
     if (!user || !isAdmin) return;
@@ -1058,7 +1144,6 @@ export default function App() {
 
   const handleLogout = async () => {
     await signOut(auth);
-    // 登出後，onAuthStateChanged 會偵測到 user 為 null，並自動觸發 signInAnonymously
   };
 
   const filteredLinks = useMemo(() => {
