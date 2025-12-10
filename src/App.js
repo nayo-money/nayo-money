@@ -20,7 +20,7 @@ import {
   serverTimestamp,
   setDoc,
   writeBatch,
-  enableIndexedDbPersistence 
+  enableIndexedDbPersistence // 啟用離線功能
 } from 'firebase/firestore';
 import { 
   Plus, 
@@ -74,7 +74,8 @@ import {
   ArrowUp,
   ArrowDown,
   Loader2,
-  RefreshCw // 新增重整圖示
+  RefreshCw,
+  WifiOff
 } from 'lucide-react';
 
 // --- Firebase Configuration (您的專屬設定) ---
@@ -91,6 +92,19 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = 'nayo-money'; 
+
+// --- Enable Offline Persistence (Fix for In-App Browsers) ---
+try {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code == 'failed-precondition') {
+      console.warn('Persistence failed: Multiple tabs open');
+    } else if (err.code == 'unimplemented') {
+      console.warn('Persistence failed: Browser not supported');
+    }
+  });
+} catch (e) {
+  console.log("Persistence init skipped");
+}
 
 // --- Icon Mapping ---
 const SOCIAL_ICONS = {
@@ -417,7 +431,6 @@ const LinkCard = ({ link, onEdit, onDelete, onMove, isEditing, isFirst, isLast }
   const contentType = link.contentType || 'financial'; 
   const buttonText = link.buttonText || '立即申辦'; 
 
-  // Safe rendering helper to prevent Object Error
   const safeBadgeValue = (typeof link.badgeValue === 'object') ? '' : link.badgeValue;
 
   return (
@@ -1103,9 +1116,9 @@ const LinkEditorModal = ({ isOpen, onClose, onSave, initialData, categories = []
 // --- Main App Component ---
 export default function App() {
   const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true); // Loading State
+  const [isLoading, setIsLoading] = useState(true); 
   
-  // Track loading states separately to prevent premature rendering
+  // Separate loading states for better control
   const [isLinksLoading, setIsLinksLoading] = useState(true);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
 
@@ -1134,6 +1147,7 @@ export default function App() {
     }
   };
 
+  // --- Dynamic Title & Favicon Update ---
   useEffect(() => {
     if (profile) {
       document.title = profile.siteTitle || 'Nayo 娜攸理財';
@@ -1154,33 +1168,37 @@ export default function App() {
       setUser(currentUser); 
       if (!currentUser) {
         signInAnonymously(auth).catch((err) => {
-            console.warn("Guest login skipped/failed:", err.code);
+            // Ignore error, might be offline or blocked by browser
+            console.log("Guest login silent fail"); 
         });
       }
     });
     return () => unsubscribe();
   }, []);
 
-  // Combined Loading Effect
+  // Combined Loading Effect: Wait for BOTH Profile and Links
   useEffect(() => {
     if (!isLinksLoading && !isProfileLoading) {
         setIsLoading(false);
     }
   }, [isLinksLoading, isProfileLoading]);
 
-  // Fallback to stop loading after 10 seconds if network hangs
+  // Fallback timeout
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 10000);
+    const timer = setTimeout(() => setIsLoading(false), 8000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Fetch Links
+  // Fetch Data
   useEffect(() => {
+    setIsLinksLoading(true);
+    setIsProfileLoading(true);
+    
+    // Links
     const q = query(
       collection(db, 'artifacts', appId, 'public', 'data', 'links'),
       orderBy('createdAt', 'desc') 
     );
-    
     const unsubLinks = onSnapshot(q, (snapshot) => {
         const fetchedLinks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         fetchedLinks.sort((a, b) => {
@@ -1191,10 +1209,11 @@ export default function App() {
         setLinks(fetchedLinks);
         setIsLinksLoading(false);
     }, (error) => {
-        console.error("Link fetch error:", error);
+        console.error(error);
         setIsLinksLoading(false);
     });
 
+    // Profile
     const profileRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'profile');
     const unsubProfile = onSnapshot(profileRef, (doc) => {
       if (doc.exists()) setProfile(doc.data());
@@ -1211,7 +1230,7 @@ export default function App() {
     return () => { unsubLinks(); unsubProfile(); };
   }, []);
 
-  // Updated Save: Assign new sortOrder to top
+  // Handlers
   const handleSaveLink = async (formData) => {
     if (!user || !isAdmin) return;
     const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'links');
@@ -1246,26 +1265,22 @@ export default function App() {
     try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'links', id)); } catch(e){ console.error(e); }
   };
 
-  // Reorder Handler
   const handleMoveLink = async (index, direction) => {
     if (!user || !isAdmin) return;
     const currentList = filteredLinks;
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= currentList.length) return;
-
+    // ... same logic ...
     const itemA = currentList[index];
     const itemB = currentList[targetIndex];
     const orderA = itemA.sortOrder !== undefined ? itemA.sortOrder : 0;
     const orderB = itemB.sortOrder !== undefined ? itemB.sortOrder : 0;
-
     let newOrderA = orderB;
     let newOrderB = orderA;
-
     if (newOrderA === newOrderB) {
         newOrderA = orderB + (direction === 'up' ? -1 : 1);
         newOrderB = orderA + (direction === 'up' ? 1 : -1);
     }
-
     try {
         const batch = writeBatch(db);
         const refA = doc(db, 'artifacts', appId, 'public', 'data', 'links', itemA.id);
@@ -1273,10 +1288,7 @@ export default function App() {
         batch.update(refA, { sortOrder: newOrderA });
         batch.update(refB, { sortOrder: newOrderB });
         await batch.commit();
-    } catch (e) {
-        console.error("Move failed:", e);
-        alert("排序更新失敗");
-    }
+    } catch (e) { console.error(e); }
   };
 
   const handleLogout = async () => {
@@ -1286,10 +1298,10 @@ export default function App() {
   const currentCategories = profile?.categories?.length > 0 ? profile.categories : DEFAULT_CATEGORIES;
 
   useEffect(() => {
-    if (currentCategories.length > 0 && !currentCategories.find(c => c.id === filter)) {
+    if (!isLoading && currentCategories.length > 0 && !currentCategories.find(c => c.id === filter)) {
         setFilter(currentCategories[0].id);
     }
-  }, [currentCategories, filter]);
+  }, [currentCategories, filter, isLoading]);
 
   const filteredLinks = useMemo(() => {
     return links.filter(l => l.category === filter);
@@ -1298,7 +1310,7 @@ export default function App() {
   return (
     <div className="min-h-screen font-sans pb-24 selection:bg-[#D4A5A5] selection:text-white" style={{ backgroundColor: THEME.bg }}>
       
-      {/* --- Admin Toggle (Login/Logout) --- */}
+      {/* --- Admin Toggle --- */}
       <div className="fixed bottom-8 right-6 z-50 flex flex-col gap-3">
         {isAdmin && (
           <button onClick={() => { setEditingLink(null); setLinkModalOpen(true); }} className="w-14 h-14 bg-[#B6968B] text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform animate-in zoom-in">
@@ -1317,147 +1329,142 @@ export default function App() {
 
       <div className="max-w-md mx-auto min-h-screen relative shadow-2xl bg-[#F5F0EB] flex flex-col">
         
-        {/* Header Content */}
-        <div className="pt-10 px-6 text-center pb-6">
-          <NayoLogo />
-          
-          {/* Main Loading State for Profile */}
-          {isLoading ? (
-             <div className="h-40 flex items-center justify-center opacity-30">
-                <Loader2 size={32} className="animate-spin text-[#B6968B]" />
-             </div>
-          ) : (
+        {/* Main Content (Show only when loaded, else show Spinner) */}
+        {isLoading ? (
+            <div className="h-screen flex flex-col items-center justify-center text-[#B6968B]/50 gap-2">
+               <Loader2 size={48} className="animate-spin" />
+               <span className="text-xs font-bold tracking-[0.2em] animate-pulse">NAYO MONEY</span>
+            </div>
+        ) : (
             <>
-              <div className="flex justify-center mb-6">
-                 <div className="w-24 h-24 rounded-full bg-stone-100 p-1 border border-[#EBE1DD] shadow-sm relative group overflow-hidden">
-                    {profile?.avatarUrl ? (
-                      <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full rounded-full bg-stone-200 flex items-center justify-center text-stone-400">
-                        <Camera size={28} />
-                      </div>
+                {/* Header Content */}
+                <div className="pt-10 px-6 text-center pb-6">
+                <NayoLogo />
+                <div className="flex justify-center mb-6">
+                    <div className="w-24 h-24 rounded-full bg-stone-100 p-1 border border-[#EBE1DD] shadow-sm relative group overflow-hidden">
+                        {profile?.avatarUrl ? (
+                        <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                        <div className="w-full h-full rounded-full bg-stone-200 flex items-center justify-center text-stone-400">
+                            <Camera size={28} />
+                        </div>
+                        )}
+                    </div>
+                </div>
+
+                <p className="inline-block px-4 py-1.5 rounded-full bg-white/60 text-sm font-medium text-[#8C7B75] backdrop-blur-sm shadow-sm border border-white/50 mb-6">
+                    {profile?.bio || '生活 x 理財 x 貓咪 | 陪你一起變有錢 🤎'}
+                </p>
+
+                <div className="flex flex-wrap justify-center gap-3 mb-4">
+                    {profile?.socialLinks?.map((link, index) => (
+                        <SocialButton 
+                            key={link.id || index}
+                            type={link.type}
+                            url={link.url}
+                            label={link.label}
+                            showLabel={link.showLabel}
+                            onClick={null} 
+                        />
+                    ))}
+                    
+                    {(!profile?.socialLinks || profile.socialLinks.length === 0) && (
+                    <>
+                        <SocialButton type="instagram" url={profile?.igUrl} />
+                        <SocialButton type="mail" url={profile?.email ? `mailto:${profile.email}` : null} />
+                        <SocialButton type="blog" url={profile?.blogUrl} />
+                        <SocialButton type="sponsor" url={profile?.sponsorUrl} showLabel={true} />
+                    </>
                     )}
-                 </div>
-              </div>
+                </div>
 
-              <p className="inline-block px-4 py-1.5 rounded-full bg-white/60 text-sm font-medium text-[#8C7B75] backdrop-blur-sm shadow-sm border border-white/50 mb-6">
-                 {profile?.bio || '生活 x 理財 x 貓咪 | 陪你一起變有錢 🤎'}
-              </p>
-
-              <div className="flex flex-wrap justify-center gap-3 mb-4">
-                {profile?.socialLinks?.map((link, index) => (
-                    <SocialButton 
-                        key={link.id || index}
-                        type={link.type}
-                        url={link.url}
-                        label={link.label}
-                        showLabel={link.showLabel}
-                        onClick={null} 
-                    />
-                ))}
-                
-                {(!profile?.socialLinks || profile.socialLinks.length === 0) && (
-                   <>
-                     <SocialButton type="instagram" url={profile?.igUrl} />
-                     <SocialButton type="mail" url={profile?.email ? `mailto:${profile.email}` : null} />
-                     <SocialButton type="blog" url={profile?.blogUrl} />
-                     <SocialButton type="sponsor" url={profile?.sponsorUrl} showLabel={true} />
-                   </>
+                {isAdmin && (
+                    <button onClick={() => setProfileModalOpen(true)} className="text-xs text-[#B6968B] underline opacity-80 hover:opacity-100">
+                    編輯個人檔案與社群
+                    </button>
                 )}
-              </div>
+                </div>
 
-              {isAdmin && (
-                <button onClick={() => setProfileModalOpen(true)} className="text-xs text-[#B6968B] underline opacity-80 hover:opacity-100">
-                  編輯個人檔案與社群
-                </button>
-              )}
+                {/* Dynamic Categories / Tabs */}
+                <div className="sticky top-0 z-40 bg-[#F5F0EB]/95 backdrop-blur-md border-b border-white/20">
+                <div className="relative max-w-md mx-auto flex items-center">
+                    <button 
+                    onClick={() => scroll('left')}
+                    className="absolute left-1 z-20 p-1.5 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-[#B6968B] hover:bg-white transition-all opacity-80 hover:opacity-100"
+                    >
+                    <ChevronLeft size={16} />
+                    </button>
+                    <div 
+                    ref={scrollRef}
+                    className="flex flex-nowrap overflow-x-auto no-scrollbar py-3 px-8 gap-3 w-full items-center scroll-smooth"
+                    >
+                    {currentCategories.map(cat => (
+                        <Tab 
+                            key={cat.id} 
+                            id={cat.id} 
+                            label={cat.label} 
+                            iconKey={cat.icon} 
+                            isActive={filter === cat.id} 
+                            onClick={setFilter} 
+                        />
+                    ))}
+                    </div>
+                    <button 
+                    onClick={() => scroll('right')}
+                    className="absolute right-1 z-20 p-1.5 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-[#B6968B] hover:bg-white transition-all opacity-80 hover:opacity-100"
+                    >
+                    <ChevronRight size={16} />
+                    </button>
+                </div>
+                </div>
+
+                {/* Content List */}
+                <div className="px-5 py-4 pb-12 flex-1 min-h-[300px] flex flex-col">
+                {filteredLinks.length === 0 ? (
+                    <div className="text-center py-20 opacity-40">
+                        <div className="w-20 h-20 bg-stone-200 rounded-full mx-auto mb-4 flex items-center justify-center">
+                            <Layout size={32} />
+                        </div>
+                        <p>這裡還沒有內容喔</p>
+                        {/* Retry Button */}
+                        <button 
+                            onClick={() => window.location.reload()} 
+                            className="mt-4 flex items-center gap-1 text-xs text-stone-400 hover:text-[#B6968B] transition-colors mx-auto"
+                        >
+                            <RefreshCw size={12} /> 重新連線
+                        </button>
+                        {isAdmin && <p className="text-xs mt-2 text-[#B6968B]">點擊右下角 + 新增</p>}
+                    </div>
+                ) : (
+                    filteredLinks.map((link, index) => (
+                    <LinkCard 
+                        key={link.id} 
+                        link={link} 
+                        isEditing={isAdmin}
+                        onEdit={(l) => { setEditingLink(l); setLinkModalOpen(true); }}
+                        onDelete={handleDelete}
+                        onMove={(dir) => handleMoveLink(index, dir)}
+                        isFirst={index === 0}
+                        isLast={index === filteredLinks.length - 1}
+                    />
+                    ))
+                )}
+                </div>
+
+                {/* Footer */}
+                <div className="text-center pb-8 pt-4 border-t border-black/5 mx-6">
+                <div className="text-[10px] text-stone-300 mb-2">Nayo Money © 2025</div>
+                {!isAdmin && (
+                    <button 
+                    onClick={() => setLoginModalOpen(true)}
+                    className="text-[9px] text-stone-300 hover:text-[#B6968B] transition-colors"
+                    >
+                    管理員登入
+                    </button>
+                )}
+                </div>
             </>
-          )}
-        </div>
-
-        {/* Dynamic Categories / Tabs */}
-        <div className="sticky top-0 z-40 bg-[#F5F0EB]/95 backdrop-blur-md border-b border-white/20">
-          <div className="relative max-w-md mx-auto flex items-center">
-            <button 
-              onClick={() => scroll('left')}
-              className="absolute left-1 z-20 p-1.5 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-[#B6968B] hover:bg-white transition-all opacity-80 hover:opacity-100"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <div 
-              ref={scrollRef}
-              className="flex flex-nowrap overflow-x-auto no-scrollbar py-3 px-8 gap-3 w-full items-center scroll-smooth"
-            >
-              {currentCategories.map(cat => (
-                  <Tab 
-                    key={cat.id} 
-                    id={cat.id} 
-                    label={cat.label} 
-                    iconKey={cat.icon} 
-                    isActive={filter === cat.id} 
-                    onClick={setFilter} 
-                  />
-              ))}
-            </div>
-            <button 
-              onClick={() => scroll('right')}
-              className="absolute right-1 z-20 p-1.5 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-[#B6968B] hover:bg-white transition-all opacity-80 hover:opacity-100"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Content List */}
-        <div className="px-5 py-4 pb-12 flex-1 min-h-[300px] flex flex-col">
-           {isLoading ? (
-             <div className="flex-1 flex flex-col items-center justify-center text-[#B6968B] opacity-50 py-20">
-                <Loader2 size={40} className="animate-spin mb-2" />
-                <span className="text-xs font-medium tracking-widest">LOADING...</span>
-             </div>
-           ) : filteredLinks.length === 0 ? (
-            <div className="text-center py-20 opacity-40">
-              <div className="w-20 h-20 bg-stone-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <Layout size={32} />
-              </div>
-              <p>這裡還沒有內容喔</p>
-              {/* Retry Button for connection issues */}
-              <button 
-                onClick={() => window.location.reload()} 
-                className="mt-4 flex items-center gap-1 text-xs text-stone-400 hover:text-[#B6968B] transition-colors"
-              >
-                <RefreshCw size={12} /> 重新連線
-              </button>
-              {isAdmin && <p className="text-xs mt-2 text-[#B6968B]">點擊右下角 + 新增</p>}
-            </div>
-           ) : (
-             filteredLinks.map((link, index) => (
-               <LinkCard 
-                 key={link.id} 
-                 link={link} 
-                 isEditing={isAdmin}
-                 onEdit={(l) => { setEditingLink(l); setLinkModalOpen(true); }}
-                 onDelete={handleDelete}
-                 onMove={(dir) => handleMoveLink(index, dir)}
-                 isFirst={index === 0}
-                 isLast={index === filteredLinks.length - 1}
-               />
-             ))
-           )}
-        </div>
-
-        {/* Footer Credit & Login Link */}
-        <div className="text-center pb-8 pt-4 border-t border-black/5 mx-6">
-           <div className="text-[10px] text-stone-300 mb-2">Nayo Money © 2025</div>
-           {!isAdmin && (
-             <button 
-               onClick={() => setLoginModalOpen(true)}
-               className="text-[9px] text-stone-300 hover:text-[#B6968B] transition-colors"
-             >
-               管理員登入
-             </button>
-           )}
-        </div>
+        )}
 
       </div>
 
