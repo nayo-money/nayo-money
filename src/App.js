@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
@@ -2022,6 +2023,7 @@ function App() {
       className="min-h-screen font-sans pb-24 selection:bg-[#D4A5A5] selection:text-white"
       style={{ backgroundColor: THEME.bg }}
     >
+      <SpeedInsights />
       <div className="fixed bottom-8 right-6 z-50 flex flex-col gap-3">
         {isAdmin && (
           <button
