@@ -21,6 +21,9 @@ import {
   setDoc,
   writeBatch,
   enableIndexedDbPersistence,
+  increment,
+  limit,
+  getDocs,
 } from "firebase/firestore";
 import {
   Plus,
@@ -75,7 +78,9 @@ import {
   ArrowDown,
   Loader2,
   RefreshCw,
-  WifiOff,
+  BarChart3,
+  MousePointerClick,
+  TrendingDown,
 } from "lucide-react";
 
 // --- Firebase Configuration (您的專屬設定) ---
@@ -93,7 +98,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = "nayo-money";
 
-// --- Enable Offline Persistence (Fix for In-App Browsers) ---
+// --- Enable Offline Persistence ---
 try {
   enableIndexedDbPersistence(db).catch((err) => {
     if (err.code == "failed-precondition") {
@@ -442,15 +447,17 @@ const Tab = ({ id, label, iconKey, isActive, onClick }) => {
   );
 };
 
-// --- Component: Link Card ---
+// --- Component: Link Card (With Stats) ---
 const LinkCard = ({
   link,
   onEdit,
   onDelete,
   onMove,
+  onClickLink,
   isEditing,
   isFirst,
   isLast,
+  totalViews,
 }) => {
   const giftList =
     typeof link.giftContent === "string"
@@ -463,14 +470,31 @@ const LinkCard = ({
   const finalUrl = ensureProtocol(link.url);
 
   const hasBadgeImage = !!link.badgeImageUrl;
-  const hasBadgeValue = !!link.badgeValue;
 
   const contentType = link.contentType || "financial";
   const buttonText = link.buttonText || "立即申辦";
 
-  // Safe rendering helper to prevent Object Error
   const safeBadgeValue =
-    typeof link.badgeValue === "object" ? "" : link.badgeValue;
+    typeof link.badgeValue === "string" || typeof link.badgeValue === "number"
+      ? link.badgeValue
+      : "";
+  const safeTitle = typeof link.title === "string" ? link.title : "";
+  const safeSubtitle = typeof link.subtitle === "string" ? link.subtitle : "";
+  const safeDescription =
+    typeof link.description === "string" ? link.description : "";
+  const safeGiftTitle =
+    typeof link.giftTitle === "string" ? link.giftTitle : "首刷好禮";
+
+  const clicks = link.clicks || 0;
+  const ctr = totalViews > 0 ? ((clicks / totalViews) * 100).toFixed(1) : "0.0";
+
+  const handleLinkAction = (e) => {
+    if (isEditing) {
+      e.preventDefault();
+      return;
+    }
+    if (onClickLink) onClickLink(link.id);
+  };
 
   return (
     <div className="relative group mb-5 bg-white rounded-[24px] shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-white">
@@ -526,7 +550,6 @@ const LinkCard = ({
         </div>
       )}
 
-      {/* Main Content Area */}
       <div className="block p-5">
         <div className="flex justify-between items-start mb-3">
           <div className="flex-1 pr-3">
@@ -553,7 +576,7 @@ const LinkCard = ({
               className="text-xl font-bold mb-1"
               style={{ color: THEME.textMain }}
             >
-              {link.title || (
+              {safeTitle || (
                 <span className="text-stone-300 italic text-base">
                   (未命名連結)
                 </span>
@@ -563,12 +586,11 @@ const LinkCard = ({
               className="text-sm font-medium mb-1"
               style={{ color: THEME.textLight }}
             >
-              {link.subtitle || link.description}
+              {safeSubtitle || safeDescription}
             </p>
           </div>
 
-          {/* Right Side: Image OR Value Badge */}
-          {(hasBadgeImage || hasBadgeValue) && (
+          {(hasBadgeImage || safeBadgeValue) && (
             <div className="shrink-0 ml-1">
               {hasBadgeImage ? (
                 <div className="w-28 h-28 rounded-xl overflow-hidden shadow-md border border-stone-100 bg-white">
@@ -604,7 +626,6 @@ const LinkCard = ({
           )}
         </div>
 
-        {/* --- Content Body --- */}
         {contentType === "image" && link.contentImageUrl ? (
           <div className="rounded-xl overflow-hidden mb-4 border border-stone-100 shadow-sm">
             <img
@@ -626,7 +647,7 @@ const LinkCard = ({
                 <div className="flex items-center gap-2 mb-2">
                   <Gift size={14} className="text-[#B6968B]" />
                   <span className="text-xs font-bold text-[#8C7B75]">
-                    {link.giftTitle || "首刷好禮"}
+                    {safeGiftTitle}
                   </span>
                 </div>
 
@@ -680,7 +701,6 @@ const LinkCard = ({
           </>
         )}
 
-        {/* CTA Button */}
         {link.url && (
           <a
             href={isEditing ? "#" : finalUrl}
@@ -690,18 +710,112 @@ const LinkCard = ({
               isEditing ? "cursor-default" : "cursor-pointer"
             }`}
             style={{ backgroundColor: THEME.primary }}
-            onClick={(e) => isEditing && e.preventDefault()}
+            onClick={handleLinkAction}
           >
             {buttonText}
             <ExternalLink size={16} />
           </a>
+        )}
+
+        {isEditing && (
+          <div className="mt-3 pt-2 border-t border-stone-100 flex items-center justify-between text-xs text-stone-400">
+            <div className="flex items-center gap-1">
+              <MousePointerClick size={12} />
+              <span>
+                點擊: <strong className="text-[#B6968B]">{clicks}</strong>
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <BarChart3 size={12} />
+              <span>
+                CTR: <strong className="text-stone-600">{ctr}%</strong>
+              </span>
+            </div>
+          </div>
         )}
       </div>
     </div>
   );
 };
 
-// ... Login Modal (Included here to prevent errors) ...
+// --- Stats Dashboard Component ---
+const StatsDashboard = ({ stats, dailyStats }) => {
+  const maxVal = Math.max(
+    ...dailyStats.map((d) => Math.max(d.pageViews || 0, d.clicks || 0)),
+    10
+  );
+
+  return (
+    <div className="bg-[#4A3B32] text-white px-6 py-6 rounded-b-3xl shadow-lg mb-[-20px] relative z-20 pb-10">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-bold flex items-center gap-2 text-[#DCC0BC]">
+          <BarChart3 size={20} /> 數據分析中心
+        </h2>
+      </div>
+
+      <div className="flex gap-4 mb-6">
+        <div className="flex-1 bg-white/10 rounded-xl p-3 backdrop-blur-sm border border-white/5">
+          <div className="text-xs text-[#DCC0BC] mb-1">總瀏覽 (PV)</div>
+          <div className="text-2xl font-bold">{stats.pageViews || 0}</div>
+        </div>
+        <div className="flex-1 bg-white/10 rounded-xl p-3 backdrop-blur-sm border border-white/5">
+          <div className="text-xs text-[#DCC0BC] mb-1">今日瀏覽</div>
+          <div className="text-2xl font-bold">
+            {dailyStats[dailyStats.length - 1]?.pageViews || 0}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-2">
+        <div className="text-xs text-[#DCC0BC] mb-2 flex justify-between">
+          <span>近 14 日流量趨勢</span>
+          <span className="flex gap-2">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[#D4A5A5]"></span> PV
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-white"></span> 點擊
+            </span>
+          </span>
+        </div>
+        <div className="flex items-end justify-between h-32 gap-1.5">
+          {dailyStats.map((d, i) => (
+            <div
+              key={i}
+              className="flex-1 flex flex-col items-center gap-1 group"
+            >
+              <div className="w-full flex gap-0.5 items-end h-full relative cursor-help">
+                <div
+                  className="w-1/2 bg-[#D4A5A5] rounded-t-sm transition-all duration-500 hover:bg-[#E0B5B5]"
+                  style={{
+                    height: `${((d.pageViews || 0) / maxVal) * 100}%`,
+                    minHeight: "4px",
+                  }}
+                ></div>
+                <div
+                  className="w-1/2 bg-white rounded-t-sm transition-all duration-500 hover:bg-stone-200"
+                  style={{
+                    height: `${((d.clicks || 0) / maxVal) * 100}%`,
+                    minHeight: "2px",
+                  }}
+                ></div>
+                <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black/80 text-[10px] px-2 py-1 rounded text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-30 pointer-events-none">
+                  <div className="font-bold border-b border-white/20 pb-0.5 mb-0.5">
+                    {d.date}
+                  </div>
+                  <div>PV: {d.pageViews || 0}</div>
+                  <div>Click: {d.clicks || 0}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Login Modal (Included here) ---
 const LoginModal = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -785,7 +899,7 @@ const LoginModal = ({ isOpen, onClose }) => {
   );
 };
 
-// ... Profile Editor Modal ...
+// --- Profile Editor Modal (Included here) ---
 const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
   const [data, setData] = useState({
     name: "Nayo 娜攸",
@@ -800,7 +914,6 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
   useEffect(() => {
     if (initialData) {
       let links = initialData.socialLinks || [];
-      // Data Migration for old structure
       if (links.length === 0 && (initialData.igUrl || initialData.email)) {
         if (initialData.igUrl)
           links.push({
@@ -1157,7 +1270,7 @@ const ProfileEditorModal = ({ isOpen, onClose, onSave, initialData }) => {
   );
 };
 
-// --- LinkEditorModal (Same) ---
+// --- LinkEditorModal ---
 const LinkEditorModal = ({
   isOpen,
   onClose,
@@ -1534,14 +1647,15 @@ const LinkEditorModal = ({
   );
 };
 
-// --- Main App Component ---
-export default function App() {
+function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Separate loading states for better control
   const [isLinksLoading, setIsLinksLoading] = useState(true);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
+
+  const [stats, setStats] = useState({ pageViews: 0 });
+  const [dailyStats, setDailyStats] = useState([]);
 
   const isAdmin = user && !user.isAnonymous;
 
@@ -1554,7 +1668,6 @@ export default function App() {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
 
-  // --- Scroll Logic for Tabs ---
   const scrollRef = useRef(null);
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -1595,25 +1708,117 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Combined Loading Effect: Wait for BOTH Profile and Links
+  useEffect(() => {
+    const trackPageView = async () => {
+      const hasViewed = sessionStorage.getItem("hasViewedSession");
+      if (!hasViewed) {
+        const today = new Date().toISOString().split("T")[0];
+        const batch = writeBatch(db);
+
+        const statsRef = doc(
+          db,
+          "artifacts",
+          appId,
+          "public",
+          "data",
+          "settings",
+          "stats"
+        );
+        batch.set(statsRef, { pageViews: increment(1) }, { merge: true });
+
+        const dailyRef = doc(
+          db,
+          "artifacts",
+          appId,
+          "public",
+          "data",
+          "analytics",
+          today
+        );
+        batch.set(
+          dailyRef,
+          { date: today, pageViews: increment(1) },
+          { merge: true }
+        );
+
+        try {
+          await batch.commit();
+          sessionStorage.setItem("hasViewedSession", "true");
+        } catch (e) {
+          console.log("Analytics tracking failed", e);
+        }
+      }
+    };
+    trackPageView();
+
+    const fetchAnalytics = async () => {
+      onSnapshot(
+        doc(db, "artifacts", appId, "public", "data", "settings", "stats"),
+        (doc) => {
+          if (doc.exists()) setStats(doc.data());
+        }
+      );
+
+      const q = query(
+        collection(db, "artifacts", appId, "public", "data", "analytics"),
+        orderBy("date", "desc"),
+        limit(14)
+      );
+      onSnapshot(q, (snapshot) => {
+        const data = snapshot.docs.map((d) => d.data()).reverse();
+        setDailyStats(data);
+      });
+    };
+
+    fetchAnalytics();
+  }, []);
+
+  const handleLinkClick = async (linkId) => {
+    const linkRef = doc(
+      db,
+      "artifacts",
+      appId,
+      "public",
+      "data",
+      "links",
+      linkId
+    );
+    updateDoc(linkRef, { clicks: increment(1) }).catch((e) =>
+      console.log("Click track fail")
+    );
+
+    const today = new Date().toISOString().split("T")[0];
+    const dailyRef = doc(
+      db,
+      "artifacts",
+      appId,
+      "public",
+      "data",
+      "analytics",
+      today
+    );
+    setDoc(
+      dailyRef,
+      { date: today, clicks: increment(1) },
+      { merge: true }
+    ).catch((e) => {});
+  };
+
   useEffect(() => {
     if (!isLinksLoading && !isProfileLoading) {
       setIsLoading(false);
     }
   }, [isLinksLoading, isProfileLoading]);
 
-  // Fallback timeout
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 8000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Fetch Data
   useEffect(() => {
     setIsLinksLoading(true);
     setIsProfileLoading(true);
 
-    // Links
     const q = query(
       collection(db, "artifacts", appId, "public", "data", "links"),
       orderBy("createdAt", "desc")
@@ -1641,7 +1846,6 @@ export default function App() {
       }
     );
 
-    // Profile
     const profileRef = doc(
       db,
       "artifacts",
@@ -1670,7 +1874,6 @@ export default function App() {
     };
   }, []);
 
-  // Handlers (Save/Delete/Move/Logout...)
   const handleSaveLink = async (formData) => {
     if (!user || !isAdmin) return;
     const collectionRef = collection(
@@ -1702,6 +1905,7 @@ export default function App() {
             : 0;
         await addDoc(collectionRef, {
           ...formData,
+          clicks: 0,
           sortOrder: currentMinOrder - 100,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -1740,7 +1944,6 @@ export default function App() {
     }
   };
 
-  // Reorder Handler
   const handleMoveLink = async (index, direction) => {
     if (!user || !isAdmin) return;
     const currentList = filteredLinks;
@@ -1810,30 +2013,15 @@ export default function App() {
     return links.filter((l) => l.category === filter);
   }, [links, filter]);
 
-  // Loading Skeleton
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#F5F0EB] flex flex-col items-center pt-20 px-6 animate-pulse">
-        <div className="w-24 h-24 bg-stone-200 rounded-full mb-6"></div>
-        <div className="h-6 w-32 bg-stone-200 rounded mb-4"></div>
-        <div className="h-4 w-48 bg-stone-200 rounded mb-8"></div>
-        <div className="flex gap-3 mb-8">
-          <div className="w-12 h-12 bg-stone-200 rounded-2xl"></div>
-          <div className="w-12 h-12 bg-stone-200 rounded-2xl"></div>
-          <div className="w-12 h-12 bg-stone-200 rounded-2xl"></div>
-        </div>
-        <div className="w-full h-10 bg-stone-200 rounded-full mb-6"></div>
-        <div className="w-full h-40 bg-white rounded-3xl border border-stone-100"></div>
-      </div>
-    );
-  }
+  const totalClicks = useMemo(() => {
+    return links.reduce((acc, curr) => acc + (curr.clicks || 0), 0);
+  }, [links]);
 
   return (
     <div
       className="min-h-screen font-sans pb-24 selection:bg-[#D4A5A5] selection:text-white"
       style={{ backgroundColor: THEME.bg }}
     >
-      {/* --- Admin Toggle --- */}
       <div className="fixed bottom-8 right-6 z-50 flex flex-col gap-3">
         {isAdmin && (
           <button
@@ -1861,156 +2049,170 @@ export default function App() {
       </div>
 
       <div className="max-w-md mx-auto min-h-screen relative shadow-2xl bg-[#F5F0EB] flex flex-col">
-        {/* Header Content */}
-        <div className="pt-10 px-6 text-center pb-6">
-          <NayoLogo />
-          <div className="flex justify-center mb-6">
-            <div className="w-24 h-24 rounded-full bg-stone-100 p-1 border border-[#EBE1DD] shadow-sm relative group overflow-hidden">
-              {profile?.avatarUrl ? (
-                <img
-                  src={profile.avatarUrl}
-                  alt="Avatar"
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full rounded-full bg-stone-200 flex items-center justify-center text-stone-400">
-                  <Camera size={28} />
-                </div>
-              )}
-            </div>
+        {isAdmin && <StatsDashboard stats={stats} dailyStats={dailyStats} />}
+
+        {isLoading ? (
+          <div className="h-screen flex flex-col items-center justify-center text-[#B6968B]/50 gap-2">
+            <Loader2 size={48} className="animate-spin" />
+            <span className="text-xs font-bold tracking-[0.2em] animate-pulse">
+              NAYO MONEY
+            </span>
           </div>
-
-          <p className="inline-block px-4 py-1.5 rounded-full bg-white/60 text-sm font-medium text-[#8C7B75] backdrop-blur-sm shadow-sm border border-white/50 mb-6">
-            {profile?.bio || "生活 x 理財 x 貓咪 | 陪你一起變有錢 🤎"}
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-3 mb-4">
-            {profile?.socialLinks?.map((link, index) => (
-              <SocialButton
-                key={link.id || index}
-                type={link.type}
-                url={link.url}
-                label={link.label}
-                showLabel={link.showLabel}
-                onClick={null}
-              />
-            ))}
-
-            {(!profile?.socialLinks || profile.socialLinks.length === 0) && (
-              <>
-                <SocialButton type="instagram" url={profile?.igUrl} />
-                <SocialButton
-                  type="mail"
-                  url={profile?.email ? `mailto:${profile.email}` : null}
-                />
-                <SocialButton type="blog" url={profile?.blogUrl} />
-                <SocialButton
-                  type="sponsor"
-                  url={profile?.sponsorUrl}
-                  showLabel={true}
-                />
-              </>
-            )}
-          </div>
-
-          {isAdmin && (
-            <button
-              onClick={() => setProfileModalOpen(true)}
-              className="text-xs text-[#B6968B] underline opacity-80 hover:opacity-100"
-            >
-              編輯個人檔案與社群
-            </button>
-          )}
-        </div>
-
-        {/* Dynamic Categories / Tabs */}
-        <div className="sticky top-0 z-40 bg-[#F5F0EB]/95 backdrop-blur-md border-b border-white/20">
-          <div className="relative max-w-md mx-auto flex items-center">
-            <button
-              onClick={() => scroll("left")}
-              className="absolute left-1 z-20 p-1.5 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-[#B6968B] hover:bg-white transition-all"
-            >
-              <ChevronLeft size={16} />
-            </button>
+        ) : (
+          <>
             <div
-              ref={scrollRef}
-              className="flex flex-nowrap overflow-x-auto no-scrollbar py-3 px-8 gap-3 w-full items-center scroll-smooth"
+              className={`${isAdmin ? "pt-10" : "pt-10"} px-6 text-center pb-6`}
             >
-              {currentCategories.map((cat) => (
-                <Tab
-                  key={cat.id}
-                  id={cat.id}
-                  label={cat.label}
-                  iconKey={cat.icon}
-                  isActive={filter === cat.id}
-                  onClick={setFilter}
-                />
-              ))}
-            </div>
-            <button
-              onClick={() => scroll("right")}
-              className="absolute right-1 z-20 p-1.5 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-[#B6968B] hover:bg-white transition-all"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Content List */}
-        <div className="px-5 py-4 pb-12 flex-1 min-h-[300px] flex flex-col">
-          {filteredLinks.length === 0 ? (
-            <div className="text-center py-20 opacity-40">
-              <div className="w-20 h-20 bg-stone-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <Layout size={32} />
+              <NayoLogo />
+              <div className="flex justify-center mb-6">
+                <div className="w-24 h-24 rounded-full bg-stone-100 p-1 border border-[#EBE1DD] shadow-sm relative group overflow-hidden">
+                  {profile?.avatarUrl ? (
+                    <img
+                      src={profile.avatarUrl}
+                      alt="Avatar"
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-stone-200 flex items-center justify-center text-stone-400">
+                      <Camera size={28} />
+                    </div>
+                  )}
+                </div>
               </div>
-              <p>這裡還沒有內容喔</p>
-              {/* Retry Button */}
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-4 flex items-center gap-1 text-xs text-stone-400 hover:text-[#B6968B] transition-colors mx-auto"
-              >
-                <RefreshCw size={12} /> 重新連線
-              </button>
+
+              <p className="inline-block px-4 py-1.5 rounded-full bg-white/60 text-sm font-medium text-[#8C7B75] backdrop-blur-sm shadow-sm border border-white/50 mb-6">
+                {profile?.bio || "生活 x 理財 x 貓咪 | 陪你一起變有錢 🤎"}
+              </p>
+
+              <div className="flex flex-wrap justify-center gap-3 mb-4">
+                {profile?.socialLinks?.map((link, index) => (
+                  <SocialButton
+                    key={link.id || index}
+                    type={link.type}
+                    url={link.url}
+                    label={link.label}
+                    showLabel={link.showLabel}
+                    onClick={null}
+                  />
+                ))}
+
+                {(!profile?.socialLinks ||
+                  profile.socialLinks.length === 0) && (
+                  <>
+                    <SocialButton type="instagram" url={profile?.igUrl} />
+                    <SocialButton
+                      type="mail"
+                      url={profile?.email ? `mailto:${profile.email}` : null}
+                    />
+                    <SocialButton type="blog" url={profile?.blogUrl} />
+                    <SocialButton
+                      type="sponsor"
+                      url={profile?.sponsorUrl}
+                      showLabel={true}
+                    />
+                  </>
+                )}
+              </div>
+
               {isAdmin && (
-                <p className="text-xs mt-2 text-[#B6968B]">點擊右下角 + 新增</p>
+                <button
+                  onClick={() => setProfileModalOpen(true)}
+                  className="text-xs text-[#B6968B] underline opacity-80 hover:opacity-100"
+                >
+                  編輯個人檔案與社群
+                </button>
               )}
             </div>
-          ) : (
-            filteredLinks.map((link, index) => (
-              <LinkCard
-                key={link.id}
-                link={link}
-                isEditing={isAdmin}
-                onEdit={(l) => {
-                  setEditingLink(l);
-                  setLinkModalOpen(true);
-                }}
-                onDelete={handleDelete}
-                onMove={(dir) => handleMoveLink(index, dir)}
-                isFirst={index === 0}
-                isLast={index === filteredLinks.length - 1}
-              />
-            ))
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="text-center pb-8 pt-4 border-t border-black/5 mx-6">
-          <div className="text-[10px] text-stone-300 mb-2">
-            Nayo Money © 2025
-          </div>
-          {!isAdmin && (
-            <button
-              onClick={() => setLoginModalOpen(true)}
-              className="text-[9px] text-stone-300 hover:text-[#B6968B]"
-            >
-              管理員登入
-            </button>
-          )}
-        </div>
+            <div className="sticky top-0 z-40 bg-[#F5F0EB]/95 backdrop-blur-md border-b border-white/20">
+              <div className="relative max-w-md mx-auto flex items-center">
+                <button
+                  onClick={() => scroll("left")}
+                  className="absolute left-1 z-20 p-1.5 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-[#B6968B] hover:bg-white transition-all opacity-80 hover:opacity-100"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <div
+                  ref={scrollRef}
+                  className="flex flex-nowrap overflow-x-auto no-scrollbar py-3 px-8 gap-3 w-full items-center scroll-smooth"
+                >
+                  {currentCategories.map((cat) => (
+                    <Tab
+                      key={cat.id}
+                      id={cat.id}
+                      label={cat.label}
+                      iconKey={cat.icon}
+                      isActive={filter === cat.id}
+                      onClick={setFilter}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={() => scroll("right")}
+                  className="absolute right-1 z-20 p-1.5 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-[#B6968B] hover:bg-white transition-all opacity-80 hover:opacity-100"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div className="px-5 py-4 pb-12 flex-1 min-h-[300px] flex flex-col">
+              {filteredLinks.length === 0 ? (
+                <div className="text-center py-20 opacity-40">
+                  <div className="w-20 h-20 bg-stone-200 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <Layout size={32} />
+                  </div>
+                  <p>這裡還沒有內容喔</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="mt-4 flex items-center gap-1 text-xs text-stone-400 hover:text-[#B6968B] transition-colors mx-auto"
+                  >
+                    <RefreshCw size={12} /> 重新連線
+                  </button>
+                  {isAdmin && (
+                    <p className="text-xs mt-2 text-[#B6968B]">
+                      點擊右下角 + 新增
+                    </p>
+                  )}
+                </div>
+              ) : (
+                filteredLinks.map((link, index) => (
+                  <LinkCard
+                    key={link.id}
+                    link={link}
+                    isEditing={isAdmin}
+                    onEdit={(l) => {
+                      setEditingLink(l);
+                      setLinkModalOpen(true);
+                    }}
+                    onDelete={handleDelete}
+                    onMove={(dir) => handleMoveLink(index, dir)}
+                    onClickLink={handleLinkClick} // Fixed: Correct function name
+                    isFirst={index === 0}
+                    isLast={index === filteredLinks.length - 1}
+                    totalViews={stats.pageViews || 1}
+                  />
+                ))
+              )}
+            </div>
+
+            <div className="text-center pb-8 pt-4 border-t border-black/5 mx-6">
+              <div className="text-[10px] text-stone-300 mb-2">
+                Nayo Money © 2025
+              </div>
+              {!isAdmin && (
+                <button
+                  onClick={() => setLoginModalOpen(true)}
+                  className="text-[9px] text-stone-300 hover:text-[#B6968B] transition-colors"
+                >
+                  管理員登入
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Modals */}
       <LoginModal
         isOpen={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
@@ -2036,3 +2238,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App; // Ensure default export
