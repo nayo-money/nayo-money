@@ -1697,14 +1697,19 @@ function App() {
   }, [profile]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (!currentUser) {
-        signInAnonymously(auth).catch((err) => {
-          console.log("Guest login silent fail");
-        });
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      try {
+        if (currentUser) {
+          setUser(currentUser);
+        } else {
+          const cred = await signInAnonymously(auth);
+          setUser(cred.user);
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
       }
     });
+  
     return () => unsubscribe();
   }, []);
 
@@ -1811,14 +1816,12 @@ function App() {
   }, [isLinksLoading, isProfileLoading]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 8000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
+  
+    if (!user) return;
+  
     setIsLinksLoading(true);
     setIsProfileLoading(true);
-
+  
     const q = query(
       collection(db, "artifacts", appId, "public", "data", "links"),
       orderBy("createdAt", "desc")
@@ -2176,6 +2179,12 @@ function App() {
                   )}
                 </div>
               ) : (
+
+                {filteredLinks.length === 0 && (
+                <div className="text-center text-stone-400 py-10">
+                  暫無資料
+                </div>
+              )}
                 filteredLinks.map((link, index) => (
                   <LinkCard
                     key={link.id}
