@@ -2179,30 +2179,32 @@ function App() {
                   )}
                 </div>
               ) : (
+  <>
+    {filteredLinks.length === 0 && (
+      <div className="text-center text-stone-400 py-10">
+        暫無資料
+      </div>
+    )}
 
-                {filteredLinks.length === 0 && (
-                <div className="text-center text-stone-400 py-10">
-                  暫無資料
-                </div>
-              )}
-                filteredLinks.map((link, index) => (
-                  <LinkCard
-                    key={link.id}
-                    link={link}
-                    isEditing={isAdmin}
-                    onEdit={(l) => {
-                      setEditingLink(l);
-                      setLinkModalOpen(true);
-                    }}
-                    onDelete={handleDelete}
-                    onMove={(dir) => handleMoveLink(index, dir)}
-                    onClickLink={handleLinkClick} // Fixed: Correct function name
-                    isFirst={index === 0}
-                    isLast={index === filteredLinks.length - 1}
-                    totalViews={stats.pageViews || 1}
-                  />
-                ))
-              )}
+    {filteredLinks.map((link, index) => (
+      <LinkCard
+        key={link.id}
+        link={link}
+        isEditing={isAdmin}
+        onEdit={(l) => {
+          setEditingLink(l);
+          setLinkModalOpen(true);
+        }}
+        onDelete={handleDelete}
+        onMove={(dir) => handleMoveLink(index, dir)}
+        onClickLink={handleLinkClick}
+        isFirst={index === 0}
+        isLast={index === filteredLinks.length - 1}
+        totalViews={stats.pageViews || 1}
+      />
+    ))}
+  </>
+)
             </div>
 
             <div className="text-center pb-8 pt-4 border-t border-black/5 mx-6">
