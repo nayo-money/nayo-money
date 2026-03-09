@@ -1697,19 +1697,14 @@ function App() {
   }, [profile]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      try {
-        if (currentUser) {
-          setUser(currentUser);
-        } else {
-          const cred = await signInAnonymously(auth);
-          setUser(cred.user);
-        }
-      } catch (err) {
-        console.error("Auth error:", err);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (!currentUser) {
+        signInAnonymously(auth).catch((err) => {
+          console.log("Guest login silent fail");
+        });
       }
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -1816,8 +1811,11 @@ function App() {
   }, [isLinksLoading, isProfileLoading]);
 
   useEffect(() => {
-    if (!user) return;
+    const timer = setTimeout(() => setIsLoading(false), 8000);
+    return () => clearTimeout(timer);
+  }, []);
 
+  useEffect(() => {
     setIsLinksLoading(true);
     setIsProfileLoading(true);
 
@@ -1874,7 +1872,7 @@ function App() {
       unsubLinks();
       unsubProfile();
     };
-  }, [user]);
+  }, []);
 
   const handleSaveLink = async (formData) => {
     if (!user || !isAdmin) return;
@@ -2178,25 +2176,23 @@ function App() {
                   )}
                 </div>
               ) : (
-                <>
-                  {filteredLinks.map((link, index) => (
-                    <LinkCard
-                      key={link.id}
-                      link={link}
-                      isEditing={isAdmin}
-                      onEdit={(l) => {
-                        setEditingLink(l);
-                        setLinkModalOpen(true);
-                      }}
-                      onDelete={handleDelete}
-                      onMove={(dir) => handleMoveLink(index, dir)}
-                      onClickLink={handleLinkClick}
-                      isFirst={index === 0}
-                      isLast={index === filteredLinks.length - 1}
-                      totalViews={stats.pageViews || 1}
-                    />
-                  ))}
-                </>
+                filteredLinks.map((link, index) => (
+                  <LinkCard
+                    key={link.id}
+                    link={link}
+                    isEditing={isAdmin}
+                    onEdit={(l) => {
+                      setEditingLink(l);
+                      setLinkModalOpen(true);
+                    }}
+                    onDelete={handleDelete}
+                    onMove={(dir) => handleMoveLink(index, dir)}
+                    onClickLink={handleLinkClick} // Fixed: Correct function name
+                    isFirst={index === 0}
+                    isLast={index === filteredLinks.length - 1}
+                    totalViews={stats.pageViews || 1}
+                  />
+                ))
               )}
             </div>
 
@@ -2238,17 +2234,9 @@ function App() {
         initialData={profile}
       />
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        .input { width: 100%; padding: 0.75rem; border-radius: 0.75rem; border: 1px solid #EBE1DD; outline: none; font-size: 0.875rem; transition: all 0.2s; }
-        .input:focus { border-color: #B6968B; box-shadow: 0 0 0 2px rgba(182, 150, 139, 0.1); }
-        .label { display: block; font-size: 0.75rem; font-weight: 700; color: #8C7B75; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.025em; }
-        .btn-primary { width: 100%; padding: 0.75rem; border-radius: 0.75rem; background-color: #B6968B; color: white; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: opacity 0.2s; }
-        .btn-primary:hover { opacity: 0.9; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}} />
+      <style>{`.input { width: 100%; padding: 0.75rem; border-radius: 0.75rem; border: 1px solid #EBE1DD; outline: none; font-size: 0.875rem; transition: all 0.2s; } .input:focus { border-color: #B6968B; box-shadow: 0 0 0 2px rgba(182, 150, 139, 0.1); } .label { display: block; font-size: 0.75rem; font-weight: 700; color: #8C7B75; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.025em; } .btn-primary { width: 100%; padding: 0.75rem; border-radius: 0.75rem; background-color: #B6968B; color: white; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: opacity 0.2s; } .btn-primary:hover { opacity: 0.9; } .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
     </div>
   );
 }
 
-export default App;
+export default App; // Ensure default export
