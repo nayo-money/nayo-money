@@ -1,16 +1,30 @@
-## Hi there 👋
+# Nayo 娜攸｜生活理財 × 水晶 — Complete CMS
 
-<!--
-**nayo-money/nayo-money** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+This is the replacement project for the existing `nayo-money` repository.
 
-Here are some ideas to get you started:
+## Included
+- Next.js App Router
+- Supabase SSR/Auth
+- Admin login protected by `admins` + `is_admin()`
+- Homepage settings: profile name, profile image, hero image, titles, buttons and links
+- Image upload to Supabase Storage (`site-images`)
+- Blog CRUD: draft/publish, slug, HTML content, cover image and SEO fields
+- Crystal CRUD
+- Bracelet/product CRUD with purchase/Instagram links
+- Category CRUD
+- Responsive horizontal card carousels
+- Blog sitemap/robots metadata
+- No service-role key or database password in source
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+## Vercel environment variables
+Set only:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+Never commit service-role/secret keys or database passwords.
+
+## Supabase
+The existing tables can be kept. Run `supabase/SETUP.sql` in SQL Editor to add the storage bucket and ensure the policies are present.
+
+## Deployment
+The repository intentionally does NOT include the old `pnpm-lock.yaml`. Vercel can install from `package.json`.
