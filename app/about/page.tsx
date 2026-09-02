@@ -1,0 +1,2 @@
+export const metadata = {title:"關於 Nayo", description:"認識 Nayo 娜攸：生活理財、旅行、生命靈數與水晶。"};
+export default function About(){return <main className="container page"><div className="eyebrow">ABOUT NAYO</div><h1>嗨，我是娜攸。</h1><p className="page-intro">這裡是我的個人品牌空間。理財讓生活有更多選擇，而生命靈數與水晶，則是我探索生活與自己的另一種方式。</p><div className="split" style={{marginTop:35}}><div className="feature-box"><h3>生活理財</h3><p>分享信用卡回饋、小資理財、旅行與生活提案，把複雜資訊整理成可以真正執行的方法。</p></div><div className="feature-box crystal"><h3>Nayo Crystal</h3><p>從生命靈數、缺數與水晶出發，製作屬於每個人的客製水晶手環。</p></div></div></main>}
