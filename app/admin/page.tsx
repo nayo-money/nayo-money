@@ -118,7 +118,7 @@ export default function AdminPage() {
     setMessage("");
     const { data, error: loginError } = await adminSupabase.auth.signInWithPassword({ email: email.trim(), password });
     if (loginError) {
-      setError(loginError.message === "Invalid login credentials" ? "Email 或密碼錯誤。請確認你是在 Supabase Authentication → Users 建立的帳號。" : loginError.message);
+      setError(loginError.message === "Invalid login credentials" ? "Email 或密碼錯誤。" : loginError.message);
       setBusy(false);
       return;
     }
@@ -150,15 +150,11 @@ export default function AdminPage() {
         <h1>管理員登入</h1>
         <p className="lead">登入後管理 Nayo 的首頁、理財 Blog、Crystal 與手環作品。</p>
         <form onSubmit={login} className="login-form">
-          <label>Email<input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="管理員 Email" required /></label>
-          <label>密碼<input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Supabase Auth 密碼" required /></label>
+          <label>帳號<input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="帳號" required /></label>
+          <label>密碼<input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="密碼" required /></label>
           {(error || message) && <div className={error ? "error-box" : "success-box"}>{error || message}</div>}
           <button className="primary" disabled={busy || !supabase}>{busy ? "登入中…" : "登入管理後台"}</button>
         </form>
-        <div className="login-help">
-          <b>第一次使用？</b>
-          <p>先到 Supabase → Authentication → Users 建立你的登入帳號，再把該 User UUID 加入 <code>public.admins</code>。</p>
-        </div>
         <a className="back-link" href="/">← 回到 Nayo 首頁</a>
       </section>
     </main>
