@@ -254,3 +254,34 @@
     padding-right:18px;
   }
 }
+
+/* Screenshot-matched homepage Latest Blog layout. */
+@media(min-width:701px){
+  .article-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:16px;
+    width:100%;
+    align-items:start;
+  }
+  .article-grid .article{
+    width:100%;
+    max-width:none;
+    margin:0;
+  }
+}
+@media(max-width:700px){
+  .article-grid{
+    display:block;
+    width:100vw;
+    margin-left:calc((100% - 100vw)/2);
+    margin-right:calc((100% - 100vw)/2);
+    padding-left:6vw;
+    padding-right:6vw;
+  }
+  .article-grid .article{
+    width:88vw;
+    max-width:390px;
+    margin:0 auto;
+  }
+}
