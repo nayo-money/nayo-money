@@ -18,7 +18,6 @@ const defaultBlogCategories = [
 
 export default async function Crystal({ searchParams }: { searchParams?: Promise<{ category?: string }> }) {
   const params = searchParams ? await searchParams : {};
-  const selectedCategory = params.category || "";
   const supabase = await createClient();
 
   let settings: Record<string, string> = {};
@@ -26,6 +25,7 @@ export default async function Crystal({ searchParams }: { searchParams?: Promise
   let lifeLinks = defaultLifeLinks;
   let posts: Post[] = [];
   let categories: { name: string; slug: string }[] = defaultBlogCategories;
+  let articleCategorySlugs: string[] = defaultBlogCategories.map(x => x.slug);
   let products: Product[] = [];
 
   if (supabase) {
@@ -47,6 +47,10 @@ export default async function Crystal({ searchParams }: { searchParams?: Promise
         } catch {}
       }
     }
+    try {
+      const configured = JSON.parse(settings.crystal_article_categories_json || "[]");
+      if (Array.isArray(configured) && configured.length) articleCategorySlugs = configured.map(String);
+    } catch {}
     posts = (postResult.data || []) as Post[];
     if (categoryResult.data?.length) categories = categoryResult.data.map((x: any) => ({ name: x.name, slug: x.slug }));
     products = (productResult.data || []) as Product[];
@@ -62,7 +66,11 @@ export default async function Crystal({ searchParams }: { searchParams?: Promise
   const braceletButton = buyMenu?.label ? `${buyMenu.label} →` : "購買須知 →";
   const braceletUrl = buyMenu?.url || "/crystal/buy";
 
-  const visiblePosts = selectedCategory ? posts.filter(post => post.categories?.slug === selectedCategory) : posts;
+  const selectedCategories = articleCategorySlugs
+    .map(slug => categories.find(category => category.slug === slug))
+    .filter(Boolean) as { name: string; slug: string }[];
+
+  const postsByCategory = (slug: string) => posts.filter(post => post.categories?.slug === slug);
 
   return (
     <main className="container page">
@@ -75,45 +83,44 @@ export default async function Crystal({ searchParams }: { searchParams?: Promise
           <a className="category crystal-life-card" href={link.url || `#number-${index + 1}`} key={link.id}>
             <div className="icon">✦</div>
             <strong>{link.label}</strong>
-            <span>查看對應內容</span>
+            <span>{link.id ? "查看對應內容" : ""}</span>
           </a>
         ))}
       </div>
 
-      <section className="section crystal-articles" id="articles">
-        <div className="section-head">
-          <div>
-            <div className="section-kicker">NAYO BLOG</div>
-            <div className="section-title">文章分類</div>
-          </div>
-          <Link className="more" href="/blog">查看全部文章 →</Link>
+      {selectedCategories.length > 0 && (
+        <div className="crystal-articles" id="articles">
+          {selectedCategories.map(category => {
+            const categoryPosts = postsByCategory(category.slug);
+            return (
+              <section className="section crystal-category-section" key={category.slug}>
+                <div className="section-head">
+                  <div>
+                    <div className="section-kicker">NAYO BLOG</div>
+                    <div className="section-title">{category.name}</div>
+                  </div>
+                  <Link className="more" href={`/blog?category=${encodeURIComponent(category.slug)}`}>看全部文章 →</Link>
+                </div>
+                {categoryPosts.length > 0 ? (
+                  <div className="post-list">
+                    {categoryPosts.map(post => (
+                      <article className="post-row" key={post.id}>
+                        {post.cover_image && <img src={post.cover_image} alt={post.title} style={{ width: "100%", maxHeight: 260, objectFit: "cover", borderRadius: 14 }} />}
+                        <small className="section-kicker">{post.categories?.name || category.name}</small>
+                        <h2>{post.title}</h2>
+                        {post.excerpt && <p>{post.excerpt}</p>}
+                        <Link className="more" href={`/blog/${post.slug}`}>閱讀全文 →</Link>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state">目前這個分類還沒有公開文章。</div>
+                )}
+              </section>
+            );
+          })}
         </div>
-
-        <div className="blog-filters">
-          <Link className={!selectedCategory ? "active" : ""} href="/crystal#articles">全部</Link>
-          {categories.map(category => (
-            <Link key={category.slug} className={selectedCategory === category.slug ? "active" : ""} href={`/crystal?category=${encodeURIComponent(category.slug)}#articles`}>
-              {category.name}
-            </Link>
-          ))}
-        </div>
-
-        {visiblePosts.length > 0 ? (
-          <div className="post-list">
-            {visiblePosts.map(post => (
-              <article className="post-row" key={post.id}>
-                {post.cover_image && <img src={post.cover_image} alt="" style={{ width: "100%", maxHeight: 260, objectFit: "cover", borderRadius: 14 }} />}
-                <small className="section-kicker">{post.categories?.name || "生活"}</small>
-                <h2>{post.title}</h2>
-                {post.excerpt && <p>{post.excerpt}</p>}
-                <Link className="more" href={`/blog/${post.slug}`}>閱讀全文 →</Link>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state">目前沒有符合這個分類的公開文章。</div>
-        )}
-      </section>
+      )}
 
       <section className="section" id="bracelets">
         <div className="section-head">

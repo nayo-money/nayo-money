@@ -15,7 +15,8 @@ const tabs: { id: Tab; label: string; icon: string }[] = [
   { id: "footer", label: "頁尾連結", icon: "⌄" },
   { id: "posts", label: "Blog 文章", icon: "✎" },
   { id: "categories", label: "文章分類", icon: "▦" },
-    { id: "products", label: "手環作品", icon: "♢" },
+  { id: "crystalPage", label: "Crystal 頁面", icon: "◇" },
+  { id: "products", label: "手環作品", icon: "♢" },
   { id: "about", label: "關於 Nayo", icon: "◎" },
   { id: "promotions", label: "信用卡優惠", icon: "▣" },
 ];
@@ -225,7 +226,8 @@ export default function AdminPage() {
         {tab === "footer" && <FooterEditor notify={setMessage} fail={setError} />}
         {tab === "posts" && <PostsEditor notify={setMessage} fail={setError} />}
         {tab === "categories" && <CategoriesEditor notify={setMessage} fail={setError} />}
-                {tab === "products" && <ProductsEditor notify={setMessage} fail={setError} />}
+        {tab === "crystalPage" && <CrystalPageEditor notify={setMessage} fail={setError} />}
+        {tab === "products" && <ProductsEditor notify={setMessage} fail={setError} />}
         {tab === "about" && <AboutEditor notify={setMessage} fail={setError} />}
         {tab === "promotions" && <PromotionsEditor notify={setMessage} fail={setError} />}
       </main>
@@ -581,6 +583,7 @@ function CrystalPageEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string
     life_9_title:"生命靈數 9", life_9_subtitle:"查看對應水晶",
     bracelet_kicker:"CUSTOM BRACELETS", bracelet_title:"缺數手環作品", bracelet_button:"購買須知 →", bracelet_url:"/crystal/buy",
     bracelet_categories_json:"[\"全部\"]",
+    crystal_article_categories_json:"[\"credit-card\",\"finance\",\"lifestyle\",\"crystal\"]",
     buy_page_eyebrow:"NAYO CRYSTAL", buy_page_title:"購買須知", buy_page_description:"從 Nayo Crystal IG 點進來的人，可以先看完整購買流程與天然水晶注意事項。",
     buy_process_title:"① 客製流程", buy_process_text:"提供需求 → 確認手圍與搭配 → 確認價格 → 製作 → 付款出貨。",
     buy_natural_title:"② 天然水晶", buy_natural_text:"冰裂、棉絮、礦缺與色差都可能是天然特徵，每顆水晶都不完全相同。",
@@ -590,8 +593,13 @@ function CrystalPageEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string
     buy_secondary_label:"逛娜攸水晶補能量Nayo Crystal →", buy_secondary_url:"/crystal"
   };
   const [form,setForm]=useState<Row>(defaults); const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false);
-  useEffect(()=>{(async()=>{if(!supabase){setLoading(false);return;} const {data,error}=await adminSupabase.from("site_settings").select("setting_key,setting_value"); if(error){fail(error.message);setLoading(false);return;} const next={...defaults}; for(const r of data||[]){if(r.setting_key)next[r.setting_key]=r.setting_value??"";} setForm(next);setLoading(false);})()},[fail]);
+  const [blogCategories,setBlogCategories]=useState<{id:string;name:string;slug:string}[]>([]);
+  useEffect(()=>{(async()=>{if(!supabase){setLoading(false);return;} const [settingsResult,categoriesResult]=await Promise.all([adminSupabase.from("site_settings").select("setting_key,setting_value"),adminSupabase.from("categories").select("id,name,slug,type,is_active,sort_order").eq("type","blog").eq("is_active",true).order("sort_order")]); if(settingsResult.error){fail(settingsResult.error.message);setLoading(false);return;} if(categoriesResult.error){fail(categoriesResult.error.message);setLoading(false);return;} const next={...defaults}; for(const r of settingsResult.data||[]){if(r.setting_key)next[r.setting_key]=r.setting_value??"";} setForm(next); setBlogCategories((categoriesResult.data||[]) as {id:string;name:string;slug:string}[]); setLoading(false);})()},[fail]);
   const set=(k:string,v:string)=>setForm((x:Row)=>({...x,[k]:v}));
+  const selectedArticleCategories=()=>{try{const v=JSON.parse(form.crystal_article_categories_json||"[]"); return Array.isArray(v)?v.map(String):[];}catch{return []}};
+  const setSelectedArticleCategories=(values:string[])=>set("crystal_article_categories_json",JSON.stringify(values));
+  const addArticleCategory=()=>{const selected=selectedArticleCategories(); const next=blogCategories.find(c=>!selected.includes(c.slug)); if(next)setSelectedArticleCategories([...selected,next.slug]);};
+  const removeArticleCategory=(slug:string)=>setSelectedArticleCategories(selectedArticleCategories().filter(x=>x!==slug));
   async function save(){if(!supabase)return;setSaving(true);try{for(const [setting_key,value] of Object.entries(form)){const {error}=await adminSupabase.from("site_settings").upsert({setting_key,setting_value:value==null?"":String(value),updated_at:new Date().toISOString()},{onConflict:"setting_key"});if(error)throw error;}notify("Crystal 頁面設定已儲存。");}catch(e:any){fail(e.message||"Crystal 頁面設定儲存失敗")}finally{setSaving(false)}}
   if(loading)return <section className="empty-card"><p>載入 Crystal 頁面設定…</p></section>;
   return <section className="editor">
@@ -603,6 +611,19 @@ function CrystalPageEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string
       <TextArea label="頁面說明" value={form.crystal_page_description} onChange={v=>set("crystal_page_description",v)} full/>
       <div className="form-section-title">生命靈數 1～9</div>
       {Array.from({length:9},(_,i)=>i+1).map(n=><div key={n} className="settings-number-card"><strong>生命靈數 {n}</strong><Field label="卡片標題" value={form[`life_${n}_title`]} onChange={v=>set(`life_${n}_title`,v)}/><Field label="卡片小字" value={form[`life_${n}_subtitle`]} onChange={v=>set(`life_${n}_subtitle`,v)}/></div>)}
+      <div className="form-section-title">Crystal 中間文章區塊</div>
+      <div className="crystal-section-picker">
+        <div className="crystal-section-picker-head"><strong>選擇要顯示的文章分類</strong><button type="button" className="secondary" onClick={addArticleCategory} disabled={!blogCategories.some(c=>!selectedArticleCategories().includes(c.slug))}>＋新增分類區塊</button></div>
+        <p className="muted">這裡選的分類會直接變成 Crystal 頁面的區塊標題，下面顯示該分類文章；前台不會顯示分類按鈕。</p>
+        {selectedArticleCategories().map((slug,index)=>{const category=blogCategories.find(c=>c.slug===slug); return <div className="crystal-section-row" key={`${slug}-${index}`}>
+          <select className="field" value={slug} onChange={e=>{const values=selectedArticleCategories(); const next=values.map((x,i)=>i===index?e.target.value:x).filter((x,i,a)=>a.indexOf(x)===i); setSelectedArticleCategories(next);}}>
+            {blogCategories.map(c=><option key={c.id} value={c.slug}>{c.name}</option>)}
+          </select>
+          <button type="button" className="danger-outline" onClick={()=>removeArticleCategory(slug)}>刪除</button>
+        </div>})}
+        {!selectedArticleCategories().length&&<p className="muted">目前沒有設定分類區塊。</p>}
+      </div>
+
       <div className="form-section-title">手環作品區</div>
       <Field label="區塊小標" value={form.bracelet_kicker} onChange={v=>set("bracelet_kicker",v)}/><Field label="區塊標題" value={form.bracelet_title} onChange={v=>set("bracelet_title",v)}/><Field label="右側按鈕文字" value={form.bracelet_button} onChange={v=>set("bracelet_button",v)}/><Field label="右側按鈕連結" value={form.bracelet_url} onChange={v=>set("bracelet_url",v)}/><TextArea label="手環作品分類條（每行一個）" value={(() => { try { const v=JSON.parse(form.bracelet_categories_json||"[\"全部\"]"); return Array.isArray(v)?v.join("\n"):"全部"; } catch { return "全部"; } })()} onChange={v=>set("bracelet_categories_json",JSON.stringify(v.split(/\n+/).map(x=>x.trim()).filter(Boolean)))} full/>
       <div className="form-section-title">購買須知頁</div>
