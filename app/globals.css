@@ -372,3 +372,24 @@
   .nav{padding-left:24px;padding-right:24px;}
   .container{padding-left:28px;padding-right:28px;}
 }
+
+
+/* FINAL ABOUT NAYO WIDTH: align the block's outer edge with the other .container content.
+   Do not use width:100% here because .newsletter itself is already a .container. */
+@media(max-width:1000px){
+  .newsletter{
+    box-sizing:border-box;
+    width:auto;
+    max-width:1240px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+}
+@media(max-width:700px){
+  .newsletter{
+    width:auto;
+    margin-left:0;
+    margin-right:0;
+    padding:25px 18px;
+  }
+}
