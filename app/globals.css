@@ -80,3 +80,11 @@
   .mobile-panel>details{width:100%;}
   .mobile-submenu a{white-space:nowrap;word-break:normal;writing-mode:horizontal-tb;}
 }
+
+/* Final mobile layout: center single cards and match Latest Blog width to credit-card cards */
+@media(max-width:700px){
+  .promo-carousel{padding-left:0;padding-right:0;scroll-padding-left:0;scroll-padding-right:0;}
+  .promo-card{flex:0 0 calc(100% - 20px);width:calc(100% - 20px);max-width:none;margin-left:10px;margin-right:10px;scroll-snap-align:center;}
+  .article-grid{display:block;width:100%;}
+  .article-grid .article{width:calc(100% - 20px);max-width:none;margin-left:10px;margin-right:10px;}
+}
