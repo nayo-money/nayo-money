@@ -177,3 +177,69 @@
   .crystal-life-card strong{font-size:16px;line-height:1.3}
   .crystal-life-card span{font-size:10px}
 }
+
+
+/* Final requested adjustments: submenu pages editable + consistent mobile widths */
+@media(max-width:700px){
+  /* Homepage: Latest Blog cards use the same visual width as credit-card cards. */
+  .promo-carousel,
+  .article-grid{
+    width:100vw;
+    margin-left:calc((100% - 100vw)/2);
+    margin-right:calc((100% - 100vw)/2);
+  }
+  .promo-carousel{
+    padding-left:6vw;
+    padding-right:6vw;
+    scroll-padding-left:6vw;
+    scroll-padding-right:6vw;
+  }
+  .promo-card,
+  .article-grid .article{
+    width:88vw;
+    max-width:390px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+  .promo-card{flex:0 0 88vw;scroll-snap-align:center;}
+  .article-grid{display:block;}
+
+  /* ABOUT NAYO block: keep the same 18px side rhythm as the content above. */
+  .newsletter{
+    width:auto;
+    margin-left:0;
+    margin-right:0;
+    border-radius:28px;
+  }
+}
+
+/* Crystal life-number navigation: desktop 5 + 4, mobile one horizontal row. */
+.crystal-life-grid{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:10px;
+}
+.crystal-life-card{
+  min-height:82px;
+  padding:10px 8px;
+}
+.crystal-life-card strong{font-size:17px;white-space:nowrap;}
+@media(max-width:700px){
+  .crystal-life-grid{
+    display:flex;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    gap:8px;
+    padding-bottom:6px;
+  }
+  .crystal-life-card{
+    flex:0 0 92px;
+    width:92px;
+    min-height:78px;
+    padding:9px 5px;
+  }
+}
+
+
+/* Menu CMS: submenu page-description fields */
+.menu-editor-item textarea{display:block;width:100%;min-height:78px;margin-top:7px;border:1px solid #dfd3cb;border-radius:10px;background:#fffdfb;padding:10px 12px;color:#332b29;resize:vertical;font:inherit;font-size:13px;line-height:1.6;}

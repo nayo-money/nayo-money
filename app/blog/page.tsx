@@ -22,14 +22,15 @@ export default async function Blog({ searchParams }: { searchParams?: Promise<{ 
   }
   if(!posts.length && !selectedCategory) posts=[];
   const children=blog.children||[];
-  const selectedLabel=children.find(c=>c.url.includes(`category=${selectedCategory}`))?.label||"";
+  const selectedChild=children.find(c=>c.url.includes(`category=${selectedCategory}`));
+  const selectedLabel=selectedChild?.label||"";
   if(selectedCategory){
     posts=posts.filter(p=>{const cat=p.categories;const slug=cat?.slug||"";return slug===selectedCategory || (!slug && selectedLabel && cat?.name===selectedLabel);});
   }
   return <main className="container page">
     <div className="eyebrow">NAYO BLOG</div>
-    <h1>{blog.label}</h1>
-    <p className="page-intro">{blog.pageDescription||""}</p>
+    <h1>{selectedLabel || blog.label}</h1>
+    <p className="page-intro">{selectedCategory ? (selectedChild?.pageDescription || blog.pageDescription || "") : (blog.pageDescription||"")}</p>
     <div className="blog-filters">
       {children.map(child=>{const isAll=!child.url.includes("category=");const href=isAll?child.url:child.url;const active=isAll?!selectedCategory:selectedCategory===new URL(child.url,"https://nayo.local").searchParams.get("category");return <Link key={child.id} className={active?"active":""} href={href}>{child.label}</Link>})}
     </div>

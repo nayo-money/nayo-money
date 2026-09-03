@@ -516,7 +516,7 @@ function MenuEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>void
   if(loading)return <section className="empty-card"><p>載入網站選單…</p></section>;
   return <section className="editor">
     <div className="editor-head">
-      <div><p className="eyebrow">MENU CMS</p><h2>網站選單</h2><p>主選單與下拉項目可自行新增、修改、刪除。</p></div>
+      <div><p className="eyebrow">MENU CMS</p><h2>網站選單</h2><p>主選單與下拉項目可自行新增、修改、刪除；每個下拉頁面也能設定自己的頁面說明。</p></div>
       <button className="primary compact" onClick={save} disabled={saving}>{saving?"儲存中…":"儲存網站選單"}</button>
     </div>
     <div className="menu-category-box">
@@ -544,8 +544,9 @@ function MenuEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>void
         <div className="menu-children">
           <div className="menu-children-head"><strong>下拉選項</strong><button className="secondary" onClick={()=>addChild(item.id)}>＋新增下拉項目</button></div>
           {(item.children||[]).map(child=><div className="menu-child-row" key={child.id}>
-            <Field label="名稱" value={child.label} onChange={v=>updateItem(child.id,"label",v)}/>
+            <Field label="名稱／頁面標題" value={child.label} onChange={v=>updateItem(child.id,"label",v)}/>
             <Field label="連結網址" value={child.url} onChange={v=>updateItem(child.id,"url",v)}/>
+            <TextArea label="頁面說明" value={child.pageDescription||""} onChange={v=>updateItem(child.id,"pageDescription",v)}/>
             <button className="danger-outline" onClick={()=>removeItem(child.id)}>刪除</button>
           </div>)}
           {!(item.children||[]).length&&<p className="muted">這個主選單目前沒有下拉選項。</p>}
