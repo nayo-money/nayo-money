@@ -409,3 +409,86 @@
 @media (max-width:700px){
   .newsletter{width:calc(100% - 36px);margin-left:auto;margin-right:auto;padding:25px;}
 }
+
+/* === FINAL GLOBAL CONTENT WIDTH / RESPONSIVE ALIGNMENT ===
+   All homepage content sections use the same outer content rail.
+   Cards match each other within the same breakpoint, while the rail keeps
+   consistent side margins during tablet layouts and browser zoom. */
+.container{
+  width:calc(100% - 48px);
+  max-width:1192px;
+  margin-left:auto;
+  margin-right:auto;
+  padding-left:0;
+  padding-right:0;
+}
+
+/* Credit-card and Latest Blog cards: exact same width by breakpoint. */
+@media (min-width:1001px){
+  .promo-card{flex:0 0 350px;width:350px;min-width:350px;max-width:350px;}
+  .article-grid{grid-template-columns:repeat(auto-fill,350px);justify-content:start;}
+  .article-grid .article{width:350px;min-width:350px;max-width:350px;}
+}
+
+@media (min-width:701px) and (max-width:1000px){
+  .container{width:calc(100% - 64px);max-width:none;}
+  .promo-card{flex:0 0 300px;width:300px;min-width:300px;max-width:300px;}
+  .article-grid{grid-template-columns:repeat(auto-fill,300px);justify-content:start;}
+  .article-grid .article{width:300px;min-width:300px;max-width:300px;}
+}
+
+@media (min-width:701px) and (max-width:800px){
+  .container{width:calc(100% - 56px);}
+}
+
+@media (max-width:700px){
+  .container{
+    width:calc(100% - 36px);
+    max-width:none;
+    padding-left:0;
+    padding-right:0;
+  }
+
+  /* The carousel itself stays inside the same content rail; no 100vw bleed. */
+  .promo-carousel{
+    width:100%;
+    margin-left:0;
+    margin-right:0;
+    padding-left:0;
+    padding-right:0;
+    scroll-padding-left:0;
+    scroll-padding-right:0;
+  }
+  .promo-card{
+    flex:0 0 100%;
+    width:100%;
+    min-width:100%;
+    max-width:none;
+    margin:0;
+    scroll-snap-align:center;
+  }
+  .article-grid{
+    display:block;
+    width:100%;
+    margin-left:0;
+    margin-right:0;
+    padding-left:0;
+    padding-right:0;
+  }
+  .article-grid .article{
+    width:100%;
+    min-width:100%;
+    max-width:none;
+    margin-left:0;
+    margin-right:0;
+  }
+
+  /* ABOUT NAYO uses the exact same .container rail as every section above. */
+  .newsletter{
+    width:calc(100% - 36px);
+    max-width:none;
+    margin-left:auto;
+    margin-right:auto;
+    padding:25px;
+  }
+}
