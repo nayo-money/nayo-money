@@ -24,7 +24,7 @@ export default async function Home() {
       supabase.from("posts").select("id,title,slug,excerpt,cover_image,published_at,status,categories(name)").eq("status", "published").order("published_at", { ascending: false }).limit(4),
       supabase.from("products").select("id,name,image_url,missing_numbers,description,price,purchase_url,status").order("sort_order").limit(8),
       supabase.from("crystals").select("id,name,image_url,life_numbers,meaning,color").order("sort_order").limit(6),
-      supabase.from("promotions").select("id,bank,badge,title,subtitle,image,bullets,meta,gifts,tags,reward_type,reward_value,reward_label,button_text,eligibility,conditions,deadline,url,sort_order").order("sort_order").order("created_at",{ascending:false}),
+      supabase.from("promotions").select("id,bank,badge,title,subtitle,image,bullets,meta,gift_title,gifts,tags,reward_value,reward_label,reward_image,button_text,eligibility,conditions,deadline,url,sort_order").order("sort_order").order("created_at",{ascending:false}),
     ]);
     if (s.data) {
       settings = { ...fallback };
@@ -78,7 +78,7 @@ export default async function Home() {
             <div className="promo-img">{card.image ? <img src={card.image} alt={card.title} /> : <span>優惠<br/>圖卡</span>}</div>
           </div>
           <div className="promo-body">
-            <span>🎁 首刷禮</span>
+            <span>🎁 {card.gift_title || "首刷禮"}</span>
             <ul>{(Array.isArray(card.gifts) ? card.gifts : (Array.isArray(card.bullets) ? card.bullets : [])).filter(Boolean).map((b: string) => <li key={b}>{b}</li>)}</ul>
           </div>
           <div className="promo-meta">

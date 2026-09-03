@@ -712,11 +712,13 @@ function PromotionsEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)
     badge:"",
     title:"",
     subtitle:"",
+    gift_title:"首刷禮",
     gifts:[""],
     tags:[""],
-    reward_type:"獎金",
+    reward_display_mode:"text",
     reward_value:"",
     reward_label:"價值",
+    reward_image:"",
     image:"",
     url:"",
     button_text:"立即申辦",
@@ -741,8 +743,8 @@ function PromotionsEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)
     const gifts=clean(row.gifts),tags=clean(row.tags),conditions=clean(row.conditions);
     const payload:any={
       category:String(row.category||""), bank:String(row.bank||""), badge:tags[0]||"", title:String(row.title||""), subtitle:String(row.subtitle||""),
-      gifts, tags, reward_type:String(row.reward_type||""), reward_value:String(row.reward_value??""), reward_label:String(row.reward_label||"價值"),
-      image:String(row.image||""), url:String(row.url||""), button_text:String(row.button_text||"立即申辦"), eligibility:String(row.eligibility||""),
+      gift_title:String(row.gift_title||"首刷禮"), gifts, tags, reward_display_mode:String(row.reward_display_mode||"text"), reward_value:String(row.reward_value??""), reward_label:String(row.reward_label||"價值"),
+      reward_image:String(row.reward_image||""), image:String(row.image||""), url:String(row.url||""), button_text:String(row.button_text||"立即申辦"), eligibility:String(row.eligibility||""),
       conditions, deadline:String(row.deadline||""), display_mode:String(row.display_mode||"text"), detail_content:String(row.detail_content||""), detail_image:String(row.detail_image||""),
       bullets:gifts, meta:conditions, sort_order:Number(row.sort_order||0)
     };
@@ -764,11 +766,11 @@ function PromotionsEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)
             <Field label="副標題／特色（顯示於標題下方）" value={x.subtitle||""} onChange={v=>set("subtitle",v)} full />
           </div></div>
 
-          <div className="promo-panel"><h3>首刷禮／優惠重點</h3><p className="promo-help">可以新增多筆；每一筆會獨立顯示。</p>{(x.gifts||[]).map((v:string,i:number)=><div className="promo-list-row" key={`gift-${i}`}><span className="promo-index">{i+1}</span><input value={v} onChange={e=>listSet("gifts",i,e.target.value)} placeholder="例如：玉山Wallet電子支付最高20%回饋"/><button className="icon-delete" onClick={()=>removeItem("gifts",i)}>×</button></div>)}<button className="secondary" onClick={()=>addItem("gifts")}>＋ 新增首刷禮</button></div>
+          <div className="promo-panel"><h3>優惠重點區塊</h3><p className="promo-help">區塊標題可以自行輸入，例如「首刷禮」、「新戶禮」、「優惠重點」；下方可新增多筆內容。</p><Field label="區塊標題" value={x.gift_title||""} onChange={v=>set("gift_title",v)} full/>{(x.gifts||[]).map((v:string,i:number)=><div className="promo-list-row" key={`gift-${i}`}><span className="promo-index">{i+1}</span><input value={v} onChange={e=>listSet("gifts",i,e.target.value)} placeholder="例如：玉山Wallet電子支付最高20%回饋"/><button className="icon-delete" onClick={()=>removeItem("gifts",i)}>×</button></div>)}<button className="secondary" onClick={()=>addItem("gifts")}>＋ 新增優惠重點</button></div>
 
           <div className="promo-panel"><h3>左上標籤</h3><p className="promo-help">例如：玉山銀行、新戶高回饋；可新增多個。</p>{(x.tags||[]).map((v:string,i:number)=><div className="promo-list-row" key={`tag-${i}`}><input value={v} onChange={e=>listSet("tags",i,e.target.value)} placeholder="例如：新戶高回饋"/><button className="icon-delete" onClick={()=>removeItem("tags",i)}>×</button></div>)}<button className="secondary" onClick={()=>addItem("tags")}>＋ 新增標籤</button></div>
 
-          <div className="promo-panel"><h3>右上角顯示／價值</h3><div className="reward-types">{["%回饋","獎金","固定金額","自訂文字"].map(t=><button key={t} className={x.reward_type===t?"reward-type active":"reward-type"} onClick={()=>set("reward_type",t)}>{t}</button>)}</div><div className="form-grid"><Field label="顯示金額／文字" value={x.reward_value||""} onChange={v=>set("reward_value",v)}/><Field label="顯示標籤" value={x.reward_label||"價值"} onChange={v=>set("reward_label",v)}/></div><p className="promo-help">例如選「獎金」＋輸入「1000」，預覽會顯示「$1,000」。</p></div>
+          <div className="promo-panel"><h3>右上角顯示／價值</h3><p className="promo-help">只需要選擇「文字」或「圖片」。選文字就輸入要顯示的內容；選圖片就直接上傳右上角圖片。</p><div className="reward-types reward-types-two"><button type="button" className={x.reward_display_mode==="text"?"reward-type active":"reward-type"} onClick={()=>set("reward_display_mode","text")}>文字</button><button type="button" className={x.reward_display_mode==="image"?"reward-type active":"reward-type"} onClick={()=>set("reward_display_mode","image")}>圖片</button></div>{x.reward_display_mode==="text"?<><div className="form-grid"><Field label="顯示文字" value={x.reward_value||""} onChange={v=>set("reward_value",v)}/><Field label="顯示標籤" value={x.reward_label||"價值"} onChange={v=>set("reward_label",v)}/></div><p className="promo-help">例如輸入「$1,000」與「價值」，前台就會直接顯示這兩段文字。</p></>:<ImageField label="上傳右上角顯示圖片" value={x.reward_image||""} onChange={async f=>{try{const u=await uploadImage(f,"promotions-reward");set("reward_image",u);notify("右上角圖片已上傳，儲存後生效。")}catch(e:any){fail(e.message)}}} setUrl={v=>set("reward_image",v)}/>}</div>
 
           <div className="promo-panel"><h3>卡片主圖</h3><ImageField label="上傳信用卡／優惠圖片" value={x.image||""} onChange={async f=>{try{const u=await uploadImage(f,"promotions");set("image",u);notify("圖片已上傳，儲存後生效。")}catch(e:any){fail(e.message)}}} setUrl={v=>set("image",v)}/></div>
 
@@ -783,16 +785,14 @@ function PromotionsEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)
       </div>
     </section>
   }
-  return <CrudList title="信用卡優惠" loading={loading} rows={rows} onAdd={()=>setEditing({...empty,gifts:[""],tags:[""],conditions:[""]})} onEdit={setEditing} onDelete={remove} columns={["category","bank","title","deadline"]}/>;
+  return <CrudList title="信用卡優惠" loading={loading} rows={rows} onAdd={()=>setEditing({...empty,gift_title:"首刷禮",gifts:[""],tags:[""],conditions:[""]})} onEdit={setEditing} onDelete={remove} columns={["category","bank","title","deadline"]}/>;
 }
 
 function PromoBackendPreview({row}:{row:Row}){
   const tags=(row.tags||[]).filter(Boolean);const gifts=(row.gifts||[]).filter(Boolean);const conditions=(row.conditions||[]).filter(Boolean);
-  const value=String(row.reward_value||"");
-  let reward=value;
-  if(row.reward_type==="獎金"||row.reward_type==="固定金額"){const n=Number(value.replace(/,/g,""));reward=value===""?"":Number.isFinite(n)?`$${n.toLocaleString("en-US")}`:`$${value}`}
-  else if(row.reward_type==="%回饋"){reward=value?`$${value}%回饋`:""}
-  return <div className="promo-preview-card"><div className="promo-preview-top"><div><div className="promo-preview-tags">{tags.map((t:string)=><span key={t}>{t}</span>)}</div><div className="promo-preview-title">{row.title||"卡片名稱"}</div><div className="promo-preview-sub">{row.subtitle||"副標題／特色"}</div></div>{reward&&<div className="promo-preview-reward"><strong>{reward}</strong><small>{row.reward_label||"價值"}</small></div>}</div>{gifts.length>0&&<div className="promo-preview-gifts"><b>🎁 首刷禮</b>{gifts.map((g:string)=><div key={g}>• {g}</div>)}</div>}{row.image&&<div className="promo-preview-image"><img src={row.image} alt="優惠圖片"/></div>}<div className="promo-preview-meta"><span>{row.eligibility||"適用對象／條件"}</span><span>{row.deadline?`期限：${row.deadline}`:"期限：—"}</span></div><button className="promo-preview-button">{row.button_text||"立即申辦"} ↗</button>{conditions.length>0&&<div className="promo-preview-conditions">{conditions.map((c:string)=><div key={c}>◷ {c}</div>)}</div>}</div>
+  const reward=String(row.reward_value||"");
+  const rewardBox=row.reward_display_mode==="image"&&row.reward_image?<div className="promo-preview-reward promo-preview-reward-image"><img src={row.reward_image} alt="右上角顯示"/></div>:reward?<div className="promo-preview-reward"><strong>{reward}</strong><small>{row.reward_label||"價值"}</small></div>:null;
+  return <div className="promo-preview-card"><div className="promo-preview-top"><div><div className="promo-preview-tags">{tags.map((t:string)=><span key={t}>{t}</span>)}</div><div className="promo-preview-title">{row.title||"卡片名稱"}</div><div className="promo-preview-sub">{row.subtitle||"副標題／特色"}</div></div>{rewardBox}</div>{gifts.length>0&&<div className="promo-preview-gifts"><b>🎁 {row.gift_title||"首刷禮"}</b>{gifts.map((g:string)=><div key={g}>• {g}</div>)}</div>}{row.image&&<div className="promo-preview-image"><img src={row.image} alt="優惠圖片"/></div>}<div className="promo-preview-meta"><span>{row.eligibility||"適用對象／條件"}</span><span>{row.deadline?`期限：${row.deadline}`:"期限：—"}</span></div><button className="promo-preview-button">{row.button_text||"立即申辦"} ↗</button>{conditions.length>0&&<div className="promo-preview-conditions">{conditions.map((c:string)=><div key={c}>◷ {c}</div>)}</div>}</div>
 }
 
 function PostsEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>void}){
