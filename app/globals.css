@@ -334,3 +334,41 @@
     margin-right:0;
   }
 }
+
+/* Tablet final: keep the same 300px card width as the credit-card cards and restore comfortable side margins. */
+@media (min-width:701px) and (max-width:1000px){
+  .container{max-width:1240px;padding-left:32px;padding-right:32px;}
+  .section{padding-left:0;padding-right:0;}
+  .promo-carousel{padding-left:0;padding-right:0;}
+  .promo-card{
+    flex:0 0 300px;
+    width:300px;
+    max-width:300px;
+    min-width:300px;
+    margin-left:0;
+    margin-right:0;
+  }
+  .article-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,300px);
+    justify-content:start;
+    width:100%;
+    padding-left:0;
+    padding-right:0;
+    margin-left:0;
+    margin-right:0;
+  }
+  .article-grid .article{
+    width:300px;
+    min-width:300px;
+    max-width:300px;
+    margin-left:0;
+    margin-right:0;
+  }
+}
+
+/* Narrow tablet / landscape phone boundary: retain margins while keeping cards fixed-width. */
+@media (min-width:701px) and (max-width:800px){
+  .nav{padding-left:24px;padding-right:24px;}
+  .container{padding-left:28px;padding-right:28px;}
+}
