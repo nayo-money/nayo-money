@@ -298,3 +298,39 @@
   .article-grid{display:block;width:100%;margin-left:0;margin-right:0;}
   .article-grid .article{width:88vw;min-width:88vw;max-width:390px;margin-left:auto;margin-right:auto;}
 }
+
+/* Final responsive alignment: keep promo and latest-article cards identical and centered inside the content area at zoomed/narrow widths. */
+@media(max-width:800px){
+  .promo-carousel{
+    width:100%;
+    margin-left:0;
+    margin-right:0;
+    padding-left:max(0px, calc((100% - 88vw)/2));
+    padding-right:max(0px, calc((100% - 88vw)/2));
+    scroll-padding-left:max(0px, calc((100% - 88vw)/2));
+    scroll-padding-right:max(0px, calc((100% - 88vw)/2));
+  }
+  .promo-card{
+    flex:0 0 88vw;
+    width:88vw;
+    max-width:390px;
+    margin-left:0;
+    margin-right:0;
+    scroll-snap-align:center;
+  }
+  .article-grid{
+    display:block;
+    width:100%;
+    margin-left:0;
+    margin-right:0;
+    padding-left:max(0px, calc((100% - 88vw)/2));
+    padding-right:max(0px, calc((100% - 88vw)/2));
+  }
+  .article-grid .article{
+    width:88vw;
+    min-width:88vw;
+    max-width:390px;
+    margin-left:0;
+    margin-right:0;
+  }
+}
