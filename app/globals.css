@@ -279,3 +279,34 @@
   }
   .newsletter-content{width:100%;}
 }
+
+/* Final content rail: every public page uses one consistent visual boundary. */
+.container{
+  width:calc(100% - 48px);
+  max-width:1240px;
+  margin-left:auto;
+  margin-right:auto;
+  padding-left:0;
+  padding-right:0;
+}
+@media(max-width:700px){
+  .container{width:calc(100% - 36px);padding-left:0;padding-right:0;}
+}
+
+/* Life-number pages */
+.life-number-detail{margin-top:42px;padding:30px;border:1px solid #e8ddd6;border-radius:24px;background:#fffdfb;}
+.life-number-detail h2{font-size:28px;margin:8px 0 20px;}
+.life-crystal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;}
+.life-crystal-grid .crystal-card{min-width:0;flex:none;}
+.life-number-nav{display:flex;flex-wrap:wrap;gap:8px;margin:28px 0 18px;}
+.life-number-nav a{border:1px solid #d9c7c0;border-radius:999px;padding:8px 12px;font-size:12px;color:#8a6b62;}
+.life-number-nav a.active{background:#332b29;color:#fff;border-color:#332b29;}
+@media(max-width:900px){.life-crystal-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:700px){.life-number-detail{padding:20px}.life-crystal-grid{grid-template-columns:1fr;}.life-number-nav{overflow-x:auto;flex-wrap:nowrap;padding-bottom:6px}.life-number-nav a{white-space:nowrap;flex:0 0 auto;}}
+
+/* CKEditor classic editing area */
+.rich-editor-host{min-height:560px;}
+.ck-editor__editable_inline{min-height:480px;max-height:none;padding:22px 28px!important;}
+.ck.ck-editor{width:100%;}
+.ck.ck-toolbar{border-color:#dfd3cb!important;background:#fffdfb!important;}
+.ck.ck-editor__main>.ck-editor__editable{border-color:#dfd3cb!important;background:#fff!important;}

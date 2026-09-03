@@ -439,7 +439,7 @@ const DEFAULT_MENU: MenuItem[] = [
     { id:"crystal-missing", label:"缺數水晶", url:"/crystal" },
     { id:"crystal-work", label:"缺數手環作品", url:"/crystal#bracelets" },
     { id:"crystal-buy", label:"購買須知", url:"/crystal/buy" },
-  ], pageLinks:Array.from({length:9},(_,i)=>({id:`life-${i+1}`,label:`生命靈數 ${i+1}`,url:`#number-${i+1}`}))},
+  ], pageLinks:Array.from({length:9},(_,i)=>({id:`life-${i+1}`,label:`生命靈數 ${i+1}`,url:`/crystal/number/${i+1}`}))},
   { id:"about", label:"關於 Nayo", url:"/about", pageDescription:"", children:[] },
 ];
 
@@ -471,7 +471,7 @@ function MenuEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>void
               ...def,
               ...saved,
               children:Array.isArray(saved.children)?saved.children:def.children,
-              pageLinks:Array.isArray(saved.pageLinks)?saved.pageLinks:def.pageLinks,
+              pageLinks:Array.isArray(saved.pageLinks)?saved.pageLinks.map((y:any,i:number)=>({ ...y, url: (!y.url || String(y.url).startsWith("#number-")) ? `/crystal/number/${i+1}` : y.url })):def.pageLinks,
             };
           });
           for(const saved of parsed){if(!merged.some(x=>x.id===saved.id))merged.push(saved);}
@@ -867,8 +867,8 @@ function RichTextEditor({value,onChange}:{value:string;onChange:(v:string)=>void
 
   useEffect(()=>{
     let cancelled=false;
-    const cssHref="https://cdn.ckeditor.com/ckeditor5/48.5.0/ckeditor5.css";
-    const scriptSrc="https://cdn.ckeditor.com/ckeditor5/48.5.0/ckeditor5.umd.js";
+    const cssHref="https://cdn.ckeditor.com/ckeditor5/43.3.1/ckeditor5.css";
+    const scriptSrc="https://cdn.ckeditor.com/ckeditor5/43.3.1/ckeditor5.umd.js";
     const addCss=()=>{
       if(document.querySelector(`link[data-nayo-ckeditor]`)) return;
       const link=document.createElement("link"); link.rel="stylesheet"; link.href=cssHref; link.dataset.nayoCkeditor="true"; document.head.appendChild(link);
@@ -897,7 +897,6 @@ function RichTextEditor({value,onChange}:{value:string;onChange:(v:string)=>void
           });
         };
         const editor=await ClassicEditor.create(hostRef.current,{
-          licenseKey:process.env.NEXT_PUBLIC_CKEDITOR_LICENSE_KEY||"",
           plugins,
           language:"zh",
           placeholder:"開始撰寫文章…",
@@ -929,12 +928,12 @@ function RichTextEditor({value,onChange}:{value:string;onChange:(v:string)=>void
         if(cancelled){editor.destroy();return;}
         editorRef.current=editor; setReady(true);
         editor.model.document.on("change:data",()=>{const data=editor.getData();lastValueRef.current=data;onChange(data);});
-      }catch(e:any){if(!cancelled)setLoadError(e?.message||"CKEditor 載入失敗。請在 Vercel 設定 NEXT_PUBLIC_CKEDITOR_LICENSE_KEY。CKEditor 5 CDN 需要授權金鑰。");}
+      }catch(e:any){if(!cancelled)setLoadError(e?.message||"CKEditor 載入失敗。請在 Vercel 設定 NEXT_PUBLIC_CKEDITOR_LICENSE_KEY。CKEditor 5 載入失敗。");}
     };
     addCss();
     const addTranslation=()=>{
       if(document.querySelector(`script[data-nayo-ckeditor-zh]`)) return;
-      const t=document.createElement("script"); t.src="https://cdn.ckeditor.com/ckeditor5/48.5.0/translations/zh.umd.js"; t.async=true; t.dataset.nayoCkeditorZh="true"; document.head.appendChild(t);
+      const t=document.createElement("script"); t.src="https://cdn.ckeditor.com/ckeditor5/43.3.1/translations/zh.umd.js"; t.async=true; t.dataset.nayoCkeditorZh="true"; document.head.appendChild(t);
     };
     addTranslation();
     const existing=document.querySelector<HTMLScriptElement>(`script[data-nayo-ckeditor]`);

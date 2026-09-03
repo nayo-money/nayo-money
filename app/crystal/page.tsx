@@ -8,7 +8,7 @@ type MenuItem = { id: string; label: string; url: string; pageDescription?: stri
 type Post = { id: string; title: string; slug: string; excerpt?: string | null; cover_image?: string | null; published_at?: string | null; categories?: { name?: string | null; slug?: string | null } | null };
 type Product = { id: string; name: string; slug: string; description?: string | null; image_url?: string | null; purchase_url?: string | null; status?: string | null; sort_order?: number | null; missing_numbers?: string | null };
 
-const defaultLifeLinks = Array.from({ length: 9 }, (_, i) => ({ id: `life-${i + 1}`, label: `生命靈數 ${i + 1}`, url: `#number-${i + 1}` }));
+const defaultLifeLinks = Array.from({ length: 9 }, (_, i) => ({ id: `life-${i + 1}`, label: `生命靈數 ${i + 1}`, url: `/crystal/number/${i + 1}` }));
 const defaultBlogCategories = [
   { name: "信用卡回饋", slug: "credit-card" },
   { name: "小資理財", slug: "finance" },
@@ -80,11 +80,11 @@ export default async function Crystal({ searchParams }: { searchParams?: Promise
 
       <div className="category-grid crystal-life-grid">
         {lifeLinks.map((link, index) => (
-          <a className="category crystal-life-card" href={link.url || `#number-${index + 1}`} key={link.id}>
+          <Link className="category crystal-life-card" href={(link.url && !String(link.url).startsWith("#number-")) ? link.url : `/crystal/number/${index + 1}`} key={link.id}>
             <div className="icon">✦</div>
             <strong>{link.label}</strong>
             <span>{link.id ? "查看對應內容" : ""}</span>
-          </a>
+          </Link>
         ))}
       </div>
 
