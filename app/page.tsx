@@ -86,8 +86,8 @@ export default async function Home() {
               {card.eligibility && <div>◷ {card.eligibility}</div>}
               {(Array.isArray(card.conditions) ? card.conditions : (Array.isArray(card.meta) ? card.meta : [])).filter(Boolean).map((m: string) => <div key={m}>◷ {m}</div>)}
             </div>
-           </div>
-           {card.deadline && <div className="promo-deadline-row"><span className="promo-deadline"><svg className="promo-calendar-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path d="M7 3.5v4M17 3.5v4M3.5 9.5h17" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><path d="M7.5 13h.01M12 13h.01M16.5 13h.01M7.5 16.5h.01M12 16.5h.01" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>期限：{card.deadline}</span></div>}
+            {card.deadline && <span className="promo-deadline"><svg className="promo-calendar-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path d="M7 3.5v4M17 3.5v4M3.5 9.5h17" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><path d="M7.5 13h.01M12 13h.01M16.5 13h.01M7.5 16.5h.01M12 16.5h.01" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>期限：{card.deadline}</span>}
+          </div>
           <a className="promo-button" href={card.url}>{card.button_text || "立即申辦"} ↗</a>
         </article>)}
       </div>
