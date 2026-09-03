@@ -859,48 +859,104 @@ function PostForm({row,cats,onSave,onCancel,onUpload}:{row:Row;cats:Row[];onSave
 }
 
 function RichTextEditor({value,onChange}:{value:string;onChange:(v:string)=>void}){
-  const ref=useRef<HTMLDivElement>(null);
-  const [source,setSource]=useState(false);
-  const [html,setHtml]=useState(value);
-  const [font,setFont]=useState('Arial');
-  const [size,setSize]=useState('3');
-  useEffect(()=>{ if(ref.current && ref.current.innerHTML!==value) ref.current.innerHTML=value||""; },[value]);
-  function keepSelection(e:React.MouseEvent){ e.preventDefault(); }
-  function sync(){ const next=ref.current?.innerHTML||""; setHtml(next); onChange(next); }
-  function exec(command:string,arg?:string){ ref.current?.focus(); document.execCommand(command,false,arg); sync(); }
-  function formatBlock(v:string){ exec('formatBlock',v); }
-  function addLink(){ const url=window.prompt('請輸入連結網址'); if(url) exec('createLink',url); }
-  function addImage(){ const url=window.prompt('請輸入圖片網址'); if(url) exec('insertImage',url); }
-  function addTable(){
-    const rows=Math.max(1,Math.min(10,Number(window.prompt('表格列數','3'))||3));
-    const cols=Math.max(1,Math.min(8,Number(window.prompt('表格欄數','3'))||3));
-    const table=document.createElement('table'); table.style.width='100%'; table.style.borderCollapse='collapse';
-    for(let r=0;r<rows;r++){const tr=table.insertRow();for(let c=0;c<cols;c++){const td=tr.insertCell();td.innerHTML='&nbsp;';td.style.border='1px solid #ddd';td.style.padding='8px';}}
-    ref.current?.focus(); const sel=window.getSelection();
-    if(sel && sel.rangeCount){ const range=sel.getRangeAt(0); range.deleteContents(); range.insertNode(table); } sync();
-  }
-  if(source) return <div className="rich-editor rich-editor-source"><div className="rich-source-head"><strong>HTML 原始碼</strong><button type="button" onClick={()=>setSource(false)}>↔ 視覺編輯</button></div><textarea className="rich-source" value={html} onChange={e=>{setHtml(e.target.value);onChange(e.target.value)}} placeholder="HTML 原始碼（進階使用）"/></div>;
-  const Btn=({children,onClick,title}:{children:React.ReactNode;onClick:()=>void;title?:string})=><button type="button" title={title} onMouseDown={keepSelection} onClick={onClick}>{children}</button>;
-  return <div className="rich-editor">
-    <div className="rich-toolbar">
-      <div className="rich-toolbar-row rich-toolbar-top">
-        <Btn onClick={()=>setSource(true)} title="檢視 HTML 原始碼">〈/〉</Btn><span className="rich-sep"/>
-        <Btn onClick={()=>exec('undo')} title="復原">↶</Btn><Btn onClick={()=>exec('redo')} title="重做">↷</Btn><span className="rich-sep"/>
-        <select value={font} onMouseDown={keepSelection} onChange={e=>{setFont(e.target.value);exec('fontName',e.target.value)}}><option>Arial</option><option>Georgia</option><option>Tahoma</option><option>Verdana</option><option>Noto Sans TC</option></select>
-        <select value={size} onMouseDown={keepSelection} onChange={e=>{setSize(e.target.value);exec('fontSize',e.target.value)}}><option value="2">小</option><option value="3">標準</option><option value="4">大</option><option value="5">較大</option><option value="6">特大</option></select>
-      </div>
-      <div className="rich-toolbar-row">
-        <select defaultValue="p" onMouseDown={keepSelection} onChange={e=>formatBlock(e.target.value)}><option value="p">段落</option><option value="h1">標題 1</option><option value="h2">標題 2</option><option value="h3">標題 3</option><option value="blockquote">引用</option></select>
-        <Btn onClick={()=>exec('bold')} title="粗體"><b>B</b></Btn><Btn onClick={()=>exec('italic')} title="斜體"><i>I</i></Btn><Btn onClick={()=>exec('underline')} title="底線"><u>U</u></Btn><Btn onClick={()=>exec('strikeThrough')} title="刪除線"><s>S</s></Btn><span className="rich-sep"/>
-        <Btn onClick={()=>exec('justifyLeft')} title="靠左">☰</Btn><Btn onClick={()=>exec('justifyCenter')} title="置中">☷</Btn><Btn onClick={()=>exec('justifyRight')} title="靠右">≡</Btn><span className="rich-sep"/>
-        <Btn onClick={()=>exec('insertUnorderedList')} title="項目符號">☷</Btn><Btn onClick={()=>exec('insertOrderedList')} title="編號清單">☰</Btn><Btn onClick={()=>exec('outdent')} title="減少縮排">⇤</Btn><Btn onClick={()=>exec('indent')} title="增加縮排">⇥</Btn><span className="rich-sep"/>
-        <Btn onClick={()=>exec('foreColor','#9a6256')} title="文字顏色">A</Btn><Btn onClick={()=>exec('hiliteColor','#f3dfd7')} title="標記顏色">A̲</Btn>
-        <Btn onClick={addLink} title="插入連結">🔗</Btn><Btn onClick={addImage} title="插入圖片">▧</Btn><Btn onClick={addTable} title="插入表格">▦</Btn><Btn onClick={()=>exec('insertHorizontalRule')} title="水平線">―</Btn><Btn onClick={()=>exec('removeFormat')} title="清除格式">✕</Btn>
-      </div>
-    </div>
-    <div ref={ref} className="rich-content" contentEditable suppressContentEditableWarning onInput={sync} onBlur={sync} data-placeholder="開始撰寫文章…"/>
+  const hostRef=useRef<HTMLDivElement>(null);
+  const editorRef=useRef<any>(null);
+  const lastValueRef=useRef(value||"");
+  const [ready,setReady]=useState(false);
+  const [loadError,setLoadError]=useState("");
+
+  useEffect(()=>{
+    let cancelled=false;
+    const cssHref="https://cdn.ckeditor.com/ckeditor5/48.5.0/ckeditor5.css";
+    const scriptSrc="https://cdn.ckeditor.com/ckeditor5/48.5.0/ckeditor5.umd.js";
+    const addCss=()=>{
+      if(document.querySelector(`link[data-nayo-ckeditor]`)) return;
+      const link=document.createElement("link"); link.rel="stylesheet"; link.href=cssHref; link.dataset.nayoCkeditor="true"; document.head.appendChild(link);
+    };
+    const init=async()=>{
+      if(cancelled || !hostRef.current || !(window as any).CKEDITOR) return;
+      const C=(window as any).CKEDITOR;
+      try{
+        addCss();
+        const {
+          ClassicEditor,Essentials,Paragraph,Heading,Font,Bold,Italic,Underline,Strikethrough,Subscript,Superscript,Code,
+          Link,AutoLink,List,Indent,IndentBlock,BlockQuote,Alignment,HorizontalLine,Table,TableToolbar,MediaEmbed,
+          Image,ImageUpload,ImageToolbar,ImageCaption,ImageStyle,ImageResize,FileRepository,FindAndReplace,SelectAll,
+          RemoveFormat,SpecialCharacters,SpecialCharactersEssentials,SourceEditing,ShowBlocks,CodeBlock,Autoformat,PasteFromOffice
+        }=C;
+        const plugins=[Essentials,Paragraph,Heading,Font,Bold,Italic,Underline,Strikethrough,Subscript,Superscript,Code,Link,AutoLink,List,Indent,IndentBlock,BlockQuote,Alignment,HorizontalLine,Table,TableToolbar,MediaEmbed,Image,ImageUpload,ImageToolbar,ImageCaption,ImageStyle,ImageResize,FileRepository,FindAndReplace,SelectAll,RemoveFormat,SpecialCharacters,SpecialCharactersEssentials,SourceEditing,ShowBlocks,CodeBlock,Autoformat,PasteFromOffice].filter(Boolean);
+        const uploadPlugin=(editor:any)=>{
+          const repository=editor.plugins.get("FileRepository");
+          repository.createUploadAdapter=(loader:any)=>({
+            upload:async()=>{
+              const file=await loader.file;
+              const url=await uploadImage(file,"posts");
+              return {default:url};
+            },
+            abort:()=>{}
+          });
+        };
+        const editor=await ClassicEditor.create(hostRef.current,{
+          licenseKey:process.env.NEXT_PUBLIC_CKEDITOR_LICENSE_KEY||"",
+          plugins,
+          language:"zh",
+          placeholder:"開始撰寫文章…",
+          initialData:value||"",
+          toolbar:{
+            items:[
+              "undo","redo","|","findAndReplace","selectAll","|",
+              "heading","|","fontFamily","fontSize","fontColor","fontBackgroundColor","|",
+              "bold","italic","underline","strikethrough","subscript","superscript","code","removeFormat","|",
+              "alignment","|","bulletedList","numberedList","outdent","indent","|",
+              "link","insertTable","mediaEmbed","imageUpload","horizontalLine","specialCharacters","blockQuote","codeBlock","|",
+              "sourceEditing","showBlocks"
+            ],
+            shouldNotGroupWhenFull:true
+          },
+          heading:{options:[
+            {model:"paragraph",title:"段落",class:"ck-heading_paragraph"},
+            {model:"heading2",view:"h2",title:"標題 2",class:"ck-heading_heading2"},
+            {model:"heading3",view:"h3",title:"標題 3",class:"ck-heading_heading3"},
+            {model:"heading4",view:"h4",title:"標題 4",class:"ck-heading_heading4"}
+          ]},
+          fontFamily:{options:["default","Arial, Helvetica, sans-serif","Georgia, serif","Verdana, sans-serif","Tahoma, sans-serif","Times New Roman, serif","Noto Sans TC, sans-serif"]},
+          fontSize:{options:[9,10,11,12,14,16,18,20,24,28,32,36]},
+          image:{toolbar:["imageTextAlternative","toggleImageCaption","imageStyle:inline","imageStyle:block","imageStyle:side","resizeImage:25","resizeImage:50","resizeImage:75","resizeImage:100"]},
+          table:{contentToolbar:["tableColumn","tableRow","mergeTableCells"]},
+          link:{addTargetToExternalLinks:true,defaultProtocol:"https://"},
+          extraPlugins:[uploadPlugin]
+        });
+        if(cancelled){editor.destroy();return;}
+        editorRef.current=editor; setReady(true);
+        editor.model.document.on("change:data",()=>{const data=editor.getData();lastValueRef.current=data;onChange(data);});
+      }catch(e:any){if(!cancelled)setLoadError(e?.message||"CKEditor 載入失敗。請在 Vercel 設定 NEXT_PUBLIC_CKEDITOR_LICENSE_KEY。CKEditor 5 CDN 需要授權金鑰。");}
+    };
+    addCss();
+    const addTranslation=()=>{
+      if(document.querySelector(`script[data-nayo-ckeditor-zh]`)) return;
+      const t=document.createElement("script"); t.src="https://cdn.ckeditor.com/ckeditor5/48.5.0/translations/zh.umd.js"; t.async=true; t.dataset.nayoCkeditorZh="true"; document.head.appendChild(t);
+    };
+    addTranslation();
+    const existing=document.querySelector<HTMLScriptElement>(`script[data-nayo-ckeditor]`);
+    if((window as any).CKEDITOR) init();
+    else if(existing) existing.addEventListener("load",init,{once:true});
+    else {const script=document.createElement("script");script.src=scriptSrc;script.async=true;script.dataset.nayoCkeditor="true";script.onload=init;script.onerror=()=>setLoadError("CKEditor 載入失敗，請確認網路連線。");document.body.appendChild(script);}
+    return()=>{cancelled=true; if(editorRef.current){editorRef.current.destroy();editorRef.current=null;setReady(false);}};
+  },[]);
+
+  useEffect(()=>{
+    const editor=editorRef.current; if(!editor) return;
+    const next=value||""; if(next!==lastValueRef.current && next!==editor.getData()){editor.setData(next);lastValueRef.current=next;}
+  },[value]);
+
+  return <div className="ckeditor-wrap">
+    {!ready && !loadError && <div className="ckeditor-loading">正在載入完整文章編輯器…</div>}
+    {loadError && <div className="ckeditor-error">{loadError}</div>}
+    <div ref={hostRef} className="ckeditor-host" />
+    <div className="ckeditor-note">可直接像 WordPress 一樣編輯文章；支援字型、字級、段落標題、顏色、表格、圖片、連結、引用、條列、HTML 原始碼等。</div>
   </div>
 }
+
 function CategoriesEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>void}){return <SimpleCrud table="categories" title="文章分類" fields={[{k:"name",l:"分類名稱"},{k:"slug",l:"Slug"},{k:"description",l:"說明",area:true},{k:"sort_order",l:"排序",number:true}]} notify={notify} fail={fail}/>} 
 function ProductsEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>void}){return <SimpleCrud table="products" title="手環作品" fields={[{k:"name",l:"作品名稱"},{k:"slug",l:"Slug"},{k:"missing_numbers",l:"缺數"},{k:"category",l:"作品分類"},{k:"description",l:"作品介紹",area:true},{k:"price",l:"價格",number:true},{k:"image_url",l:"圖片網址"},{k:"purchase_url",l:"購買連結"},{k:"instagram_url",l:"Instagram 連結"},{k:"sort_order",l:"排序",number:true}]} imageFolder="products" notify={notify} fail={fail}/>} 
 
@@ -932,6 +988,6 @@ const PROMO_CSS=`
 const CSS=`
 :root{--bg:#f8f4f0;--card:#fffdfb;--ink:#2e2926;--muted:#8c8078;--rose:#b9968a;--rose2:#eadbd5;--line:#e8ddd7}*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--ink)}body{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}button,input,textarea,select{font:inherit}.loading{min-height:100dvh;display:grid;place-items:center;color:var(--muted)}.login-wrap{min-height:100dvh;display:grid;place-items:center;padding:24px}.login-card{width:min(100%,480px);background:var(--card);border:1px solid var(--line);border-radius:28px;padding:42px;box-shadow:0 20px 70px #5d46331a}.brand-mark{width:54px;height:54px;border:1px solid var(--rose2);border-radius:50%;display:grid;place-items:center;font:27px Georgia,serif;color:var(--rose);background:#fff}.brand-mark.small{width:40px;height:40px;font-size:21px}.eyebrow{font-size:12px;letter-spacing:.18em;color:#b67e70;font-weight:800;margin:0 0 9px}.login-card h1,.topbar h1,.welcome h2,.next-card h2,.empty-card h2,.editor h2{font-family:Georgia,"Noto Serif TC",serif}.login-card h1{font-size:40px;margin:0 0 10px}.lead{color:var(--muted);line-height:1.8;margin-bottom:28px}.login-form{display:grid;gap:18px}.login-form label,.field-label{display:grid;gap:8px;font-size:13px;font-weight:700}.login-form input,.field-label input,.field-label textarea,.field{width:100%;border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px 14px;outline:none}.settings-number-card{border:1px solid var(--line);background:#fffaf7;border-radius:14px;padding:14px;display:grid;gap:12px}.settings-number-card>strong{font-size:14px;color:#72584d}.form-section-title{grid-column:1/-1;font-family:Georgia,"Noto Serif TC",serif;font-size:20px;font-weight:700;margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}.field-label textarea{resize:vertical;line-height:1.7}.login-form input:focus,.field-label input:focus,.field-label textarea:focus,.field:focus{border-color:var(--rose);box-shadow:0 0 0 3px #b9968a1a}.primary{border:0;border-radius:12px;padding:14px 18px;background:#3b332f;color:#fff;cursor:pointer;font-weight:700}.primary:disabled{opacity:.6}.compact{padding:11px 16px}.soft-btn{border:1px solid var(--line);background:#fff;border-radius:11px;padding:10px 15px;cursor:pointer}.head-actions{display:flex;gap:9px}.error-box{padding:12px 14px;background:#fff0ee;border:1px solid #efd0ca;color:#a34d42;border-radius:10px;font-size:13px;line-height:1.65;white-space:pre-line}.success-box{padding:12px 14px;background:#eef8f1;border:1px solid #cfe6d6;color:#477254;border-radius:10px;font-size:13px;line-height:1.65;white-space:pre-line}back-link{display:block;margin-top:22px;color:var(--muted);font-size:13px;text-decoration:none}.admin-layout{min-height:100dvh;display:flex}.sidebar{width:260px;background:#302b28;color:#fff;padding:24px 18px;display:flex;flex-direction:column}.side-brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;padding:5px 8px 28px}.side-brand span:last-child{display:grid}.side-brand b{font-size:16px}.side-brand small{font-size:11px;color:#c8b9b1}.side-label{font-size:10px;letter-spacing:.18em;color:#a99991;padding:0 12px 10px}.sidebar nav{display:grid;gap:4px}.nav-item{border:0;background:transparent;color:#d7ccc6;text-align:left;padding:12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:11px;font-size:14px}.nav-item:hover,.nav-item.active{background:#4a403b;color:#fff}.nav-item.active{box-shadow:inset 3px 0 var(--rose)}.side-bottom{margin-top:auto;border-top:1px solid #ffffff16;padding:18px 8px 4px}.admin-user{display:flex;align-items:center;gap:9px}.avatar{width:34px;height:34px;border-radius:50%;background:#efe1da;color:#72584d;display:grid;place-items:center;font-weight:800}.admin-user b,.admin-user small{display:block}.admin-user b{font-size:12px}.admin-user small{font-size:10px;color:#a99b94;max-width:160px;overflow:hidden;text-overflow:ellipsis}.logout{width:100%;margin-top:14px;border:1px solid #ffffff20;background:transparent;color:#cfc3bd;border-radius:9px;padding:9px;cursor:pointer;font-size:12px}.admin-main{flex:1;min-width:0;padding:34px clamp(20px,4vw,56px);max-width:1500px}.topbar{display:flex;justify-content:space-between;align-items:end;margin-bottom:26px}.topbar h1{font-size:34px;margin:0}.view-site{color:#7f665c;text-decoration:none;font-size:13px;border:1px solid var(--line);padding:9px 13px;border-radius:10px;background:#fff}.notice{margin-bottom:18px}.welcome{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(120deg,#fffdfb,#f4e8e2);border:1px solid var(--line);border-radius:22px;padding:28px;margin-bottom:18px}.welcome h2{font-size:25px;margin:7px 0}.welcome p{color:var(--muted);line-height:1.8;margin:0}.pill{display:inline-block;border-radius:999px;background:#fff;color:#967568;border:1px solid var(--rose2);font-size:11px;padding:5px 9px}.welcome-mark{width:80px;height:80px;border-radius:50%;background:#fff;border:1px solid var(--rose2);display:grid;place-items:center;color:var(--rose);font:42px Georgia,serif}
 .editor-help{grid-column:1/-1;margin:-7px 0 4px;color:var(--muted);font-size:12px;line-height:1.7}.crystal-category-bar{display:flex;gap:10px;flex-wrap:wrap;margin:28px 0 8px}.crystal-category-bar button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 17px;color:var(--muted);cursor:pointer}.crystal-category-bar button.active{background:#302b28;color:#fff;border-color:#302b28}.crystal-life-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:28px}.crystal-life-card{min-height:112px;padding:18px}.crystal-life-card .icon{font-size:16px}.crystal-life-card strong{font-size:14px}.crystal-life-card span{font-size:10px}.bracelet-empty{display:none}
-.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.stat-card{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:20px;text-align:left;cursor:pointer;display:grid;gap:7px}.stat-icon{font-size:18px;color:var(--rose)}.stat-label{font-size:13px;color:var(--muted)}.stat-card strong{font-size:30px}.stat-card small{font-size:11px;color:#a9897d}.next-card,.empty-card,.editor{margin-top:18px;border:1px solid var(--line);background:var(--card);border-radius:22px;padding:28px}.next-card h2{font-size:24px}.next-card p:last-child,.editor-head p{color:var(--muted);line-height:1.8}.editor-head{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:24px}.editor h2{font-size:27px;margin:3px 0}.editor-head p{margin:0}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}.field-label.full{grid-column:1/-1}.image-field{grid-column:1/-1;border:1px dashed #d9c8c0;border-radius:16px;padding:16px;display:grid;gap:10px;background:#fffaf7}.image-label{font-size:13px;font-weight:800}.image-field img{width:180px;height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}.image-field input{width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff}.table-wrap table{border-collapse:collapse;width:100%;min-width:680px}.table-wrap th,.table-wrap td{padding:12px 13px;border-bottom:1px solid #eee5df;text-align:left;font-size:12px;vertical-align:top}.table-wrap th{background:#fbf6f2;color:#7d6f68;font-size:11px}.table-wrap tr:last-child td{border-bottom:0}.table-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 9px;font-size:11px;cursor:pointer;margin-right:6px}.table-btn.danger{color:#a34d42}.empty-row,.loading-box{padding:50px 20px;text-align:center;color:var(--muted);border:1px dashed #dfd1c9;border-radius:14px;background:#fffaf7}.rich-editor-wrap{grid-column:1/-1}.rich-editor-label{font-size:13px;font-weight:800;margin-bottom:6px}.rich-editor-help{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:10px}.rich-editor{border:1px solid #cfc7c1;border-radius:7px;background:#fff;overflow:hidden;box-shadow:0 1px 3px #0000000d}.rich-toolbar{background:linear-gradient(#fafafa,#f0f0f0);border-bottom:1px solid #c9c9c9;padding:7px 8px;display:grid;gap:5px}.rich-toolbar-row{display:flex;align-items:center;gap:2px;flex-wrap:wrap}.rich-toolbar button{height:30px;min-width:30px;border:1px solid transparent;background:transparent;border-radius:3px;color:#333;cursor:pointer;font-size:14px;padding:3px 8px}.rich-toolbar button:hover{background:#fff;border-color:#cfcfcf;box-shadow:0 1px 2px #00000012}.rich-toolbar select{height:30px;border:1px solid #c9c9c9;background:#fff;border-radius:3px;padding:2px 8px;color:#444;min-width:92px}.rich-toolbar-top select{min-width:125px}.rich-toolbar-top select+select{min-width:72px}.rich-sep{width:1px;height:22px;background:#d2d2d2;margin:0 4px}.rich-content{min-height:360px;padding:18px 16px;background:#fff;outline:none;font-size:16px;line-height:1.8;overflow:auto}.rich-content:empty:before{content:attr(data-placeholder);color:#aaa}.rich-content h1{font-size:30px}.rich-content h2{font-size:25px}.rich-content h3{font-size:21px}.rich-content blockquote{margin:14px 0;padding:8px 14px;border-left:4px solid var(--rose);background:#faf4f1;color:#6f625c}.rich-content img{max-width:100%;height:auto}.rich-content table{width:100%;border-collapse:collapse;margin:12px 0}.rich-content td,.rich-content th{border:1px solid #ddd;padding:8px}.rich-editor-source{padding:10px}.rich-source-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.rich-source-head button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:7px 10px;cursor:pointer}.rich-source{width:100%;min-height:360px;border:1px solid var(--line);border-radius:5px;padding:12px;font-family:Consolas,monospace;line-height:1.6;resize:vertical;outline:none}
-@media(max-width:900px){.sidebar{width:82px;padding:18px 10px}.side-brand span:last-child,.side-label{display:none}.side-brand{justify-content:center}.nav-item{justify-content:center;font-size:0}.nav-item span{display:none}.nav-item::first-letter{font-size:18px}.admin-user>div:last-child,.logout{display:none}.stats-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.admin-layout{display:block}.sidebar{position:sticky;top:0;z-index:20;width:100%;height:auto;display:flex;flex-direction:row;padding:8px 10px;overflow:auto}.side-brand{padding:0 8px}.sidebar nav{display:flex}.nav-item{min-width:56px}.side-bottom{display:none}.admin-main{padding:22px 14px}.topbar h1{font-size:28px}.welcome{padding:20px}.welcome-mark{display:none}.form-grid{grid-template-columns:1fr}.field-label.full,.image-field{grid-column:auto}.editor-head{align-items:flex-start;flex-direction:column}.head-actions{width:100%}.head-actions button{flex:1}.stats-grid{gap:9px}.stat-card{padding:15px}.login-card{padding:30px 22px}}
+.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.stat-card{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:20px;text-align:left;cursor:pointer;display:grid;gap:7px}.stat-icon{font-size:18px;color:var(--rose)}.stat-label{font-size:13px;color:var(--muted)}.stat-card strong{font-size:30px}.stat-card small{font-size:11px;color:#a9897d}.next-card,.empty-card,.editor{margin-top:18px;border:1px solid var(--line);background:var(--card);border-radius:22px;padding:28px}.next-card h2{font-size:24px}.next-card p:last-child,.editor-head p{color:var(--muted);line-height:1.8}.editor-head{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:24px}.editor h2{font-size:27px;margin:3px 0}.editor-head p{margin:0}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}.field-label.full{grid-column:1/-1}.image-field{grid-column:1/-1;border:1px dashed #d9c8c0;border-radius:16px;padding:16px;display:grid;gap:10px;background:#fffaf7}.image-label{font-size:13px;font-weight:800}.image-field img{width:180px;height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}.image-field input{width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff}.table-wrap table{border-collapse:collapse;width:100%;min-width:680px}.table-wrap th,.table-wrap td{padding:12px 13px;border-bottom:1px solid #eee5df;text-align:left;font-size:12px;vertical-align:top}.table-wrap th{background:#fbf6f2;color:#7d6f68;font-size:11px}.table-wrap tr:last-child td{border-bottom:0}.table-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 9px;font-size:11px;cursor:pointer;margin-right:6px}.table-btn.danger{color:#a34d42}.empty-row,.loading-box{padding:50px 20px;text-align:center;color:var(--muted);border:1px dashed #dfd1c9;border-radius:14px;background:#fffaf7}@media(max-width:900px){.sidebar{width:82px;padding:18px 10px}.side-brand span:last-child,.side-label{display:none}.side-brand{justify-content:center}.nav-item{justify-content:center;font-size:0}.nav-item span{display:none}.nav-item::first-letter{font-size:18px}.admin-user>div:last-child,.logout{display:none}.stats-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.admin-layout{display:block}.sidebar{position:sticky;top:0;z-index:20;width:100%;height:auto;display:flex;flex-direction:row;padding:8px 10px;overflow:auto}.side-brand{padding:0 8px}.sidebar nav{display:flex}.nav-item{min-width:56px}.side-bottom{display:none}.admin-main{padding:22px 14px}.topbar h1{font-size:28px}.welcome{padding:20px}.welcome-mark{display:none}.form-grid{grid-template-columns:1fr}.field-label.full,.image-field{grid-column:auto}.editor-head{align-items:flex-start;flex-direction:column}.head-actions{width:100%}.head-actions button{flex:1}.stats-grid{gap:9px}.stat-card{padding:15px}.login-card{padding:30px 22px}}
+.ckeditor-wrap{grid-column:1/-1;border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 8px 30px #5d46330b}.ckeditor-host{min-height:520px}.ckeditor-loading,.ckeditor-error{padding:18px;color:var(--muted);font-size:13px;background:#fffaf7;border-bottom:1px solid var(--line)}.ckeditor-error{color:#a34d42;background:#fff0ee}.ckeditor-note{padding:10px 14px;color:var(--muted);font-size:11px;background:#fbf6f2;border-top:1px solid var(--line)}.ckeditor-wrap .ck.ck-editor{border:0}.ckeditor-wrap .ck.ck-toolbar{border:0;border-bottom:1px solid var(--line);background:#fffdfb;padding:8px}.ckeditor-wrap .ck.ck-editor__main>.ck-editor__editable{min-height:520px;border:0!important;box-shadow:none!important;padding:24px 28px}.ckeditor-wrap .ck-content{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;font-size:16px;line-height:1.9;color:var(--ink)}.ckeditor-wrap .ck-content h2,.ckeditor-wrap .ck-content h3,.ckeditor-wrap .ck-content h4{font-family:Georgia,"Noto Serif TC",serif;color:var(--ink)}.ckeditor-wrap .ck-content img{max-width:100%}.ckeditor-wrap .ck-content table{width:100%}@media(max-width:700px){.ckeditor-wrap .ck.ck-toolbar{padding:5px}.ckeditor-wrap .ck.ck-editor__main>.ck-editor__editable{min-height:420px;padding:18px}.ckeditor-wrap .ck.ck-toolbar{max-height:132px;overflow:auto}.ckeditor-note{font-size:10px}}
 `;
