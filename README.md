@@ -28,3 +28,10 @@ The existing tables can be kept. Run `supabase/SETUP.sql` in SQL Editor to add t
 
 ## Deployment
 The repository intentionally does NOT include the old `pnpm-lock.yaml`. Vercel can install from `package.json`.
+
+## 本版 Crystal 更新
+- Crystal 前台不再顯示水晶資料區。
+- 保留生命靈數 1～9 與 CUSTOM BRACELETS／缺數手環作品。
+- 手環作品分類條可在後台「Crystal 頁面」設定。
+- 手環作品需有 `products.category` 才能被分類條篩選。
+- 後台移除「水晶」管理入口，但不刪除 Supabase `crystals` 表。

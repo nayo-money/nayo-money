@@ -1,0 +1,6 @@
+import { createClient } from "@/lib/supabase/server";
+export const revalidate=60;
+export const metadata={title:"關於 Nayo",description:"認識 Nayo 娜攸：生活理財、旅行、生命靈數與水晶。"};
+const defaults={about_page_eyebrow:"ABOUT NAYO",about_page_title:"嗨，我是娜攸。",about_page_description:"這裡是我的個人品牌空間。理財讓生活有更多選擇，而生命靈數與水晶，則是我探索生活與自己的另一種方式。",about_life_title:"生活理財",about_life_description:"分享信用卡回饋、小資理財、旅行與生活提案，把複雜資訊整理成可以真正執行的方法。",about_crystal_title:"Nayo Crystal",about_crystal_description:"從生命靈數、缺數與水晶出發，製作屬於每個人的客製水晶手環。"};
+export default async function About(){const supabase=await createClient();const settings={...defaults};if(supabase){const {data}=await supabase.from("site_settings").select("setting_key,setting_value");for(const r of data||[])if(r.setting_key&&r.setting_key in settings)(settings as any)[r.setting_key]=r.setting_value??"";}
+return <main className="container page"><div className="eyebrow">{settings.about_page_eyebrow}</div><h1>{settings.about_page_title}</h1><p className="page-intro">{settings.about_page_description}</p><div className="split" style={{marginTop:35}}><div className="feature-box"><h3>{settings.about_life_title}</h3><p>{settings.about_life_description}</p></div><div className="feature-box crystal"><h3>{settings.about_crystal_title}</h3><p>{settings.about_crystal_description}</p></div></div></main>}
