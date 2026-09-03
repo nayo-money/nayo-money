@@ -243,3 +243,14 @@
 
 /* Menu CMS: submenu page-description fields */
 .menu-editor-item textarea{display:block;width:100%;min-height:78px;margin-top:7px;border:1px solid #dfd3cb;border-radius:10px;background:#fffdfb;padding:10px 12px;color:#332b29;resize:vertical;font:inherit;font-size:13px;line-height:1.6;}
+
+/* Final width fix: homepage ABOUT NAYO block aligns with the same inner content width as the sections above. */
+@media(max-width:700px){
+  .newsletter.container{
+    width:auto;
+    margin-left:18px;
+    margin-right:18px;
+    padding-left:18px;
+    padding-right:18px;
+  }
+}
