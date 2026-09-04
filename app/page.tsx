@@ -22,7 +22,7 @@ export default async function Home() {
     const [s, p, pr, c, promo] = await Promise.all([
       supabase.from("site_settings").select("setting_key, setting_value"),
       supabase.from("posts").select("id,title,slug,excerpt,cover_image,published_at,status,categories(name)").eq("status", "published").order("published_at", { ascending: false }).limit(4),
-      supabase.from("products").select("id,name,image_url,missing_numbers,description,price,purchase_url,status").order("sort_order").limit(8),
+      supabase.from("products").select("id,name,image_url,missing_numbers,category,description,price,purchase_url,status").eq("status", "published").order("sort_order").limit(8),
       supabase.from("crystals").select("id,name,image_url,life_numbers,meaning,color").order("sort_order").limit(6),
       supabase.from("promotions").select("id,bank,badge,title,subtitle,image,bullets,meta,gift_title,gifts,tags,reward_value,reward_label,reward_image,button_text,eligibility,conditions,deadline,url,sort_order").order("sort_order").order("created_at",{ascending:false}),
     ]);
@@ -66,7 +66,8 @@ export default async function Home() {
         <div><div className="section-kicker">CREDIT CARD OFFERS</div><div className="section-title">信用卡優惠</div></div>
         <Link className="more" href="/promotions">看全部優惠 →</Link>
       </div>
-      <div className="promo-carousel">
+      <div className="promo-carousel-wrap">
+        <div className="promo-carousel">
         {!displayPromotions.length && <p className="carousel-hint">目前還沒有信用卡優惠，請到後台「信用卡優惠」新增。</p>}
         {displayPromotions.map((card) => <article className="promo-card" key={card.id}>
           <div className="promo-top">
@@ -90,6 +91,8 @@ export default async function Home() {
           {card.deadline && <div className="promo-deadline-row"><span className="promo-deadline"><svg className="promo-calendar-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path d="M7 3.5v4M17 3.5v4M3.5 9.5h17" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><path d="M7.5 13h.01M12 13h.01M16.5 13h.01M7.5 16.5h.01M12 16.5h.01" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>期限：{card.deadline}</span></div>}
           <a className="promo-button" href={card.url}>{card.button_text || "立即申辦"} ↗</a>
         </article>)}
+        </div>
+        {displayPromotions.length > 1 && <div className="promo-scroll-indicator" aria-hidden="true"><span className="promo-scroll-arrows">‹&nbsp;›</span><span>左右滑動</span></div>}
       </div>
     </section>
 
@@ -113,21 +116,22 @@ export default async function Home() {
       </div>
     </section>
 
-    {/* 最近文章下面：缺數手環作品橫向卡片 */}
+    {/* 商品橫向卡片 */}
     <section className="container section" id="bracelets">
       <div className="section-head">
         <div>
-          <div className="section-kicker">NAYO CRYSTAL WORKS</div>
-          <div className="section-title">缺數手環作品</div>
+          <div className="section-kicker">NAYO PRODUCTS</div>
+          <div className="section-title">商品</div>
         </div>
-        <Link className="more" href="/crystal#bracelets">看全部作品 →</Link>
+        <Link className="more" href="/crystal#bracelets">看全部商品 →</Link>
       </div>
       <div className="carousel-hint">← 左右滑動查看更多作品 →</div>
       <div className="carousel bracelet-carousel">
-        {!displayProducts.length && <p className="carousel-hint">目前還沒有手環作品，請到後台「手環作品」新增。</p>}
+        {!displayProducts.length && <p className="carousel-hint">目前還沒有商品，請到後台「商品」新增。</p>}
         {displayProducts.map((p: any) => <article className="crystal-card" key={p.id}>
           <div className="crystal-art">{p.image_url ? <img src={p.image_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18 }} /> : "✦"}</div>
-          <div className="crystal-num">缺數 {p.missing_numbers || ""}</div>
+          {p.category && <div className="crystal-num">{p.category}</div>}
+          {p.missing_numbers && <div className="crystal-num">缺數 {p.missing_numbers}</div>}
           <div className="crystal-name">{p.name}</div>
           <div className="crystal-desc">{p.description || ""}</div>
           {p.purchase_url && <a className="promo-button" href={p.purchase_url} target="_blank" rel="noreferrer">查看作品 →</a>}

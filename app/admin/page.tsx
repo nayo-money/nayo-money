@@ -16,7 +16,7 @@ const tabs: { id: Tab; label: string; icon: string }[] = [
   { id: "posts", label: "Blog 文章", icon: "✎" },
   { id: "categories", label: "文章分類", icon: "▦" },
   { id: "crystalPage", label: "Crystal 頁面", icon: "◇" },
-  { id: "products", label: "手環作品", icon: "♢" },
+  { id: "products", label: "商品", icon: "♢" },
   { id: "about", label: "關於 Nayo", icon: "◎" },
   { id: "promotions", label: "信用卡優惠", icon: "▣" },
 ];
@@ -156,7 +156,7 @@ export default function AdminPage() {
         <h1>管理員登入</h1>
 
         <p className="lead">
-          登入後管理 Nayo 的首頁、理財 Blog、Crystal 與手環作品。
+          登入後管理 Nayo 的首頁、理財 Blog、Crystal 與商品。
         </p>
 
         <form onSubmit={login} className="login-form">
@@ -236,11 +236,11 @@ export default function AdminPage() {
 }
 
 function Overview({ stats, setTab }: { stats: { posts:number; categories:number; products:number; promotions:number }, setTab:(tab:Tab)=>void }) {
-  const cards: [Tab,string,number,string][] = [["posts","Blog 文章",stats.posts,"✎"],["categories","文章分類",stats.categories,"▦"],["products","手環作品",stats.products,"♢"],["promotions","信用卡優惠",stats.promotions,"▣"]];
+  const cards: [Tab,string,number,string][] = [["posts","Blog 文章",stats.posts,"✎"],["categories","文章分類",stats.categories,"▦"],["products","商品",stats.products,"♢"],["promotions","信用卡優惠",stats.promotions,"▣"]];
   return <>
     <section className="welcome"><div><span className="pill">Nayo CMS</span><h2>今天也好好整理你的網站。</h2><p>首頁內容與商品資料不用再改程式，登入後直接在這裡編輯。</p></div><div className="welcome-mark">N</div></section>
     <div className="stats-grid">{cards.map(([id,label,count,icon]) => <button key={id} className="stat-card" onClick={() => setTab(id)}><span className="stat-icon">{icon}</span><span className="stat-label">{label}</span><strong>{count}</strong><small>管理 →</small></button>)}</div>
-    <section className="next-card"><p className="eyebrow">CMS</p><h2>你現在可以直接管理網站內容</h2><p>首頁設定可換大頭貼、主圖、標題與按鈕；Blog、分類與手環作品都可以新增、修改、刪除。</p></section>
+    <section className="next-card"><p className="eyebrow">CMS</p><h2>你現在可以直接管理網站內容</h2><p>首頁設定可換大頭貼、主圖、標題與按鈕；Blog、分類與商品都可以新增、修改、刪除。</p></section>
   </>;
 }
 
@@ -437,7 +437,7 @@ const DEFAULT_MENU: MenuItem[] = [
   { id:"crystal", label:"Nayo Crystal", url:"/crystal", pageDescription:"從缺數認識自己，再挑選適合自己的水晶。", children:[
     { id:"crystal-life", label:"生命靈數", url:"/crystal" },
     { id:"crystal-missing", label:"缺數水晶", url:"/crystal" },
-    { id:"crystal-work", label:"缺數手環作品", url:"/crystal#bracelets" },
+    { id:"crystal-work", label:"商品", url:"/crystal#bracelets" },
     { id:"crystal-buy", label:"購買須知", url:"/crystal/buy" },
   ], pageLinks:Array.from({length:9},(_,i)=>({id:`life-${i+1}`,label:`生命靈數 ${i+1}`,url:`/crystal/number/${i+1}`}))},
   { id:"about", label:"關於 Nayo", url:"/about", pageDescription:"", children:[] },
@@ -1037,7 +1037,7 @@ export function RichTextEditor({value,onChange,folder="posts"}:{value:string;onC
 }
 
 function CategoriesEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>void}){return <SimpleCrud table="categories" title="文章分類" fields={[{k:"name",l:"分類名稱"},{k:"slug",l:"Slug"},{k:"description",l:"說明",area:true},{k:"sort_order",l:"排序",number:true}]} notify={notify} fail={fail}/>} 
-function ProductsEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>void}){return <SimpleCrud table="products" title="手環作品" fields={[{k:"name",l:"作品名稱"},{k:"slug",l:"Slug"},{k:"missing_numbers",l:"缺數"},{k:"description",l:"作品介紹",area:true},{k:"price",l:"價格"},{k:"image_url",l:"圖片網址"},{k:"purchase_url",l:"購買連結"},{k:"instagram_url",l:"Instagram 連結"},{k:"sort_order",l:"排序",number:true}]} imageFolder="products" notify={notify} fail={fail}/>} 
+function ProductsEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>void}){return <SimpleCrud table="products" title="商品" fields={[{k:"name",l:"商品名稱"},{k:"slug",l:"Slug"},{k:"category",l:"商品分類"},{k:"missing_numbers",l:"缺數"},{k:"description",l:"商品介紹",area:true},{k:"price",l:"價格"},{k:"image_url",l:"圖片網址"},{k:"purchase_url",l:"購買連結"},{k:"instagram_url",l:"Instagram 連結"},{k:"sort_order",l:"排序",number:true}]} imageFolder="products" notify={notify} fail={fail}/>} 
 
 function SimpleCrud({table,title,fields,notify,fail,imageFolder}:{table:string;title:string;fields:{k:string;l:string;area?:boolean;number?:boolean}[];notify:(s:string)=>void;fail:(s:string)=>void;imageFolder?:string}){
   const [rows,setRows]=useState<Row[]>([]);const [editing,setEditing]=useState<Row|null>(null);const [loading,setLoading]=useState(true);
