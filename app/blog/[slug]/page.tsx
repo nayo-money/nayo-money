@@ -19,7 +19,7 @@ async function getPost(slug:string){
 }
 
 function makeDescription(post:PostData){
- const plain=String(post.excerpt||"").replace(/<[^>]+>/g," ").replace(/\\s+/g," ").trim();
+ const plain=String(post.excerpt||"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
  return (post.seo_description||plain||post.title).slice(0,160);
 }
 
@@ -41,17 +41,17 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
 }
 
 function slugifyHeading(text:string,index:number){
- const base=text.trim().toLowerCase().replace(/[^\\p{L}\\p{N}]+/gu,"-").replace(/^-+|-+$/g,"").slice(0,70);
+ const base=text.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-+|-+$/g,"").slice(0,70);
  return `heading-${base||index}`;
 }
 function prepareContent(html:string){
  let i=0;
  const toc:{id:string;label:string;level:number}[]=[];
- const content=String(html||"").replace(/<(h[2-4])([^>]*)>([\\s\\S]*?)<\\/\\1>/gi,(_m,tag,attrs,inner)=>{
-   i++; const label=inner.replace(/<[^>]+>/g," ").replace(/&nbsp;/g," ").replace(/\\s+/g," ").trim();
-   const existing=(attrs.match(/\\bid=["']([^"']+)["']/i)||[])[1];
+ const content=String(html||"").replace(/<(h[2-4])([^>]*)>([\s\S]*?)<\/\1>/gi,(_m,tag,attrs,inner)=>{
+   i++; const label=inner.replace(/<[^>]+>/g," ").replace(/&nbsp;/g," ").replace(/\s+/g," ").trim();
+   const existing=(attrs.match(/\bid=["']([^"']+)["']/i)||[])[1];
    const id=existing||slugifyHeading(label,i); toc.push({id,label,level:Number(tag.substring(1))});
-   const cleanAttrs=String(attrs).replace(/\\s+id=["'][^"']*["']/gi,"");
+   const cleanAttrs=String(attrs).replace(/\s+id=["'][^"']*["']/gi,"");
    return `<${tag}${cleanAttrs} id="${id}">${inner}</${tag}>`;
  });
  return {content,toc};
