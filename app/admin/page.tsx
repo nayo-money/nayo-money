@@ -823,10 +823,10 @@ function PostsEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>voi
   useEffect(()=>{load()},[]);
   async function save(row:Row){if(!supabase)return;const payload: Row={...row,category_id:row.category_id||null,published_at:row.status==="published"?(row.published_at||new Date().toISOString()):null};delete payload["categories"];const {error}=row.id?await adminSupabase.from("posts").update(payload).eq("id",row.id):await adminSupabase.from("posts").insert(payload);if(error)fail(error.message);else{notify(row.id?"文章已更新。":"文章已新增。");setEditing(null);load()}}
   async function remove(id:string){if(!supabase||!confirm("確定刪除這篇文章？"))return;const {error}=await adminSupabase.from("posts").delete().eq("id",id);if(error)fail(error.message);else{notify("文章已刪除。");load()}}
-  if(editing)return <PostForm row={editing} cats={cats} onSave={save} onCancel={()=>setEditing(null)} onUpload={async f=>{const u=await uploadImage(f,"posts");setEditing(x=>({...x,cover_image:u}));}}/>;
+  if(editing)return <PostForm row={editing} cats={cats} onSave={save} onCancel={()=>setEditing(null)} onUpload={async f=>uploadImage(f,"posts")}/>;
   return <CrudList title="Blog 文章" loading={loading} rows={rows} onAdd={()=>setEditing({title:"",slug:"",excerpt:"",content:"",cover_image:"",status:"draft",category_id:"",seo_title:"",seo_description:""})} onEdit={setEditing} onDelete={remove} columns={["title","status","created_at"]}/>
 }
-function PostForm({row,cats,onSave,onCancel,onUpload}:{row:Row;cats:Row[];onSave:(r:Row)=>void;onCancel:()=>void;onUpload:(f:File)=>Promise<void>}){
+function PostForm({row,cats,onSave,onCancel,onUpload}:{row:Row;cats:Row[];onSave:(r:Row)=>void;onCancel:()=>void;onUpload:(f:File)=>Promise<string>}){
   const [x,setX]=useState(row);
   const set=(k:string,v:any)=>setX({...x,[k]:v});
   function autoSlug(title:string){
@@ -898,7 +898,7 @@ function PostForm({row,cats,onSave,onCancel,onUpload}:{row:Row;cats:Row[];onSave
         <div className="rich-editor-help">直接像一般文章編輯器一樣輸入，不需要自己寫 HTML。可使用粗體、標題、條列、連結、引用等格式。</div>
         <RichTextEditor value={x.content||""} onChange={v=>set("content",v)}/>
       </div>
-      <ImageField label="封面圖片（會顯示在文章最上方）" value={x.cover_image||""} onChange={onUpload} setUrl={v=>set("cover_image",v)}/>
+      <ImageField label="封面圖片（會顯示在文章最上方）" value={x.cover_image||""} onChange={async f=>{const u=await onUpload(f);set("cover_image",u);}} setUrl={v=>set("cover_image",v)}/>
     </div>
   </section>
 }
@@ -1037,7 +1037,7 @@ export function RichTextEditor({value,onChange,folder="posts"}:{value:string;onC
 }
 
 function CategoriesEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>void}){return <SimpleCrud table="categories" title="文章分類" fields={[{k:"name",l:"分類名稱"},{k:"slug",l:"Slug"},{k:"description",l:"說明",area:true},{k:"sort_order",l:"排序",number:true}]} notify={notify} fail={fail}/>} 
-function ProductsEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>void}){return <SimpleCrud table="products" title="手環作品" fields={[{k:"name",l:"作品名稱"},{k:"slug",l:"Slug"},{k:"missing_numbers",l:"缺數"},{k:"category",l:"作品分類"},{k:"description",l:"作品介紹",area:true},{k:"price",l:"價格",number:true},{k:"image_url",l:"圖片網址"},{k:"purchase_url",l:"購買連結"},{k:"instagram_url",l:"Instagram 連結"},{k:"sort_order",l:"排序",number:true}]} imageFolder="products" notify={notify} fail={fail}/>} 
+function ProductsEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>void}){return <SimpleCrud table="products" title="手環作品" fields={[{k:"name",l:"作品名稱"},{k:"slug",l:"Slug"},{k:"missing_numbers",l:"缺數"},{k:"description",l:"作品介紹",area:true},{k:"price",l:"價格"},{k:"image_url",l:"圖片網址"},{k:"purchase_url",l:"購買連結"},{k:"instagram_url",l:"Instagram 連結"},{k:"sort_order",l:"排序",number:true}]} imageFolder="products" notify={notify} fail={fail}/>} 
 
 function SimpleCrud({table,title,fields,notify,fail,imageFolder}:{table:string;title:string;fields:{k:string;l:string;area?:boolean;number?:boolean}[];notify:(s:string)=>void;fail:(s:string)=>void;imageFolder?:string}){
   const [rows,setRows]=useState<Row[]>([]);const [editing,setEditing]=useState<Row|null>(null);const [loading,setLoading]=useState(true);
