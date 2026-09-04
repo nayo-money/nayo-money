@@ -46,7 +46,7 @@ export default async function Crystal({ searchParams }: { searchParams?: Promise
       supabase.from("site_settings").select("setting_key,setting_value"),
       supabase.from("posts").select("id,title,slug,excerpt,cover_image,published_at,categories(name,slug)").eq("status", "published").order("published_at", { ascending: false }),
       supabase.from("categories").select("name,slug,type,is_active,sort_order").eq("type", "blog").eq("is_active", true).order("sort_order"),
-      supabase.from("products").select("id,name,slug,description,price,image_url,purchase_url,status,sort_order,missing_numbers,category").eq("status", "published").order("sort_order").order("created_at", { ascending: false }),
+      supabase.from("products").select("id,name,slug,description,price,image_url,purchase_url,status,sort_order,missing_numbers,category").order("sort_order").order("created_at", { ascending: false }),
     ]);
 
     for (const row of settingResult.data || []) {

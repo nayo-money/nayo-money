@@ -22,7 +22,7 @@ export default async function Home() {
     const [s, p, pr, c, promo] = await Promise.all([
       supabase.from("site_settings").select("setting_key, setting_value"),
       supabase.from("posts").select("id,title,slug,excerpt,cover_image,published_at,status,categories(name)").eq("status", "published").order("published_at", { ascending: false }).limit(4),
-      supabase.from("products").select("id,name,image_url,missing_numbers,category,description,price,purchase_url,status").eq("status", "published").order("sort_order").limit(8),
+      supabase.from("products").select("id,name,image_url,missing_numbers,category,description,price,purchase_url,status").order("sort_order").order("created_at", { ascending: false }).limit(8),
       supabase.from("crystals").select("id,name,image_url,life_numbers,meaning,color").order("sort_order").limit(6),
       supabase.from("promotions").select("id,bank,badge,title,subtitle,image,bullets,meta,gift_title,gifts,tags,reward_value,reward_label,reward_image,button_text,eligibility,conditions,deadline,url,sort_order").order("sort_order").order("created_at",{ascending:false}),
     ]);
@@ -123,7 +123,7 @@ export default async function Home() {
           <div className="section-kicker">NAYO PRODUCTS</div>
           <div className="section-title">商品</div>
         </div>
-        <Link className="more" href="/crystal#bracelets">看全部商品 →</Link>
+        <Link className="more" href="/crystal#products">看全部商品 →</Link>
       </div>
       <div className="carousel-hint">← 左右滑動查看更多作品 →</div>
       <div className="carousel bracelet-carousel">
@@ -155,23 +155,6 @@ export default async function Home() {
           <Link className="more" href={settings.crystal_feature_url || "/crystal"}>{settings.crystal_feature_button || "探索 Crystal →"}</Link>
           <Link className="more" href={settings.crystal_feature_buy_url || "/crystal/buy"}>{settings.crystal_feature_buy_button || "購買須知 →"}</Link>
         </div>
-      </div>
-    </section>
-
-    {/* 生命靈數／水晶入口 */}
-    <section className="container section">
-      <div className="section-head">
-        <div><div className="section-kicker">LIFE NUMBER × CRYSTAL</div><div className="section-title">生命靈數水晶</div></div>
-        <Link className="more" href="/crystal">看全部 →</Link>
-      </div>
-      <div className="carousel">
-        {!displayCrystals.length && <p className="carousel-hint">目前還沒有水晶資料，請到後台「水晶」新增。</p>}
-        {displayCrystals.map((c: any) => <article className="crystal-card" key={c.id}>
-          <div className="crystal-art">{c.image_url ? <img src={c.image_url} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18 }} /> : `✦ ${c.life_numbers || ""}`}</div>
-          <div className="crystal-num">生命靈數 {c.life_numbers || ""}</div>
-          <div className="crystal-name">{c.name}</div>
-          <div className="crystal-desc">{c.meaning || ""}</div>
-        </article>)}
       </div>
     </section>
 
