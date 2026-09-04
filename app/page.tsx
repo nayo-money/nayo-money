@@ -22,7 +22,7 @@ export default async function Home() {
     const [s, p, pr, c, promo] = await Promise.all([
       supabase.from("site_settings").select("setting_key, setting_value"),
       supabase.from("posts").select("id,title,slug,excerpt,cover_image,published_at,status,categories(name)").eq("status", "published").order("published_at", { ascending: false }).limit(4),
-      supabase.from("products").select("id,name,image_url,missing_numbers,category,description,price,purchase_url,status").order("sort_order").order("created_at", { ascending: false }).limit(8),
+      supabase.from("products").select("*").order("sort_order").order("created_at", { ascending: false }).limit(8),
       supabase.from("crystals").select("id,name,image_url,life_numbers,meaning,color").order("sort_order").limit(6),
       supabase.from("promotions").select("id,bank,badge,title,subtitle,image,bullets,meta,gift_title,gifts,tags,reward_value,reward_label,reward_image,button_text,eligibility,conditions,deadline,url,sort_order").order("sort_order").order("created_at",{ascending:false}),
     ]);

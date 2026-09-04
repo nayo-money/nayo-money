@@ -537,3 +537,13 @@
 
 .crystal-product-filters{margin-top:0;margin-bottom:22px}.crystal-product-filters a{font-size:12px}.crystal-products-carousel{margin-top:0}.crystal-price{font-size:14px;font-weight:800;color:#8d6a5e;margin:8px 0 13px}
 @media(max-width:700px){.crystal-product-filters{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}.crystal-product-filters::-webkit-scrollbar{display:none}.crystal-product-filters a{flex:0 0 auto}.crystal-products-carousel{padding-right:12vw}}
+
+/* FINAL PRODUCT CARD LAYOUT: image must stay inside the image box; all text starts below it. */
+.crystal-card{display:flex;flex-direction:column;overflow:hidden;}
+.crystal-art{position:relative;width:100%;height:190px!important;min-height:190px!important;max-height:190px!important;flex:0 0 190px!important;overflow:hidden;border-radius:18px;background:#fffdfb;display:block!important;}
+.crystal-art img{position:static!important;display:block!important;width:100%!important;height:190px!important;min-height:190px!important;max-height:190px!important;object-fit:cover!important;margin:0!important;border-radius:18px!important;}
+.crystal-card .crystal-num,.crystal-card .crystal-name,.crystal-card .crystal-desc,.crystal-card .crystal-price,.crystal-card .promo-button{position:relative;z-index:1;flex:none;}
+@media(max-width:700px){
+  .crystal-art{height:190px!important;min-height:190px!important;max-height:190px!important;flex-basis:190px!important;}
+  .crystal-art img{height:190px!important;min-height:190px!important;max-height:190px!important;}
+}
