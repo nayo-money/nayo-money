@@ -64,14 +64,14 @@ export default async function Home() {
     <section className="container section" id="card-promotions">
       <div className="section-head">
         <div><div className="section-kicker">CREDIT CARD OFFERS</div><div className="section-title">信用卡優惠</div></div>
-        <Link className="more" href="/blog">看全部優惠 →</Link>
+        <Link className="more" href="/promotions">看全部優惠 →</Link>
       </div>
       <div className="promo-carousel">
         {!displayPromotions.length && <p className="carousel-hint">目前還沒有信用卡優惠，請到後台「信用卡優惠」新增。</p>}
         {displayPromotions.map((card) => <article className="promo-card" key={card.id}>
           <div className="promo-top">
             <div>
-              <div className="chips"><span className="chip">{card.bank}</span><span className="chip">{card.badge}</span></div>
+              <div className="chips">{card.category && <span className="chip promo-category-chip">{card.category}</span>}<span className="chip">{card.bank}</span>{card.badge && <span className="chip">{card.badge}</span>}</div>
               <div className="promo-title">{card.title}</div>
               <div className="promo-sub">{card.subtitle}</div>
             </div>

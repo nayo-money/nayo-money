@@ -470,3 +470,21 @@
 .standalone-admin-page .topbar{position:sticky;top:0;z-index:5;}
 .standalone-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 @media(max-width:700px){.life-number-content{padding:20px}.standalone-actions{width:100%;justify-content:flex-start}.standalone-admin-page .topbar{position:static;}}
+
+/* 信用卡優惠獨立分類頁 */
+.promotions-page .page-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+.promo-filters{margin-top:26px}
+.promo-page-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(315px,315px));gap:22px;margin-top:34px}
+.promo-page-card{width:315px;max-width:315px}
+.promo-category-chip{font-weight:600}
+.promo-button-disabled{display:flex;align-items:center;justify-content:center;cursor:default}
+@media(max-width:1000px) and (min-width:701px){
+  .promo-page-grid{grid-template-columns:repeat(auto-fill,minmax(300px,300px))}
+  .promo-page-card{width:300px;max-width:300px}
+}
+@media(max-width:700px){
+  .promotions-page .page-title-row{display:block}
+  .promotions-page .page-title-row>.more{display:inline-flex;margin-top:10px}
+  .promo-page-grid{display:block;margin-top:28px}
+  .promo-page-card{width:88vw;max-width:390px;margin:0 auto 20px}
+}

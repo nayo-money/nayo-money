@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
@@ -859,139 +859,135 @@ function PostForm({row,cats,onSave,onCancel,onUpload}:{row:Row;cats:Row[];onSave
 }
 
 export function RichTextEditor({value,onChange,folder="posts"}:{value:string;onChange:(v:string)=>void;folder?:string}){
-  const hostRef=useRef<HTMLDivElement>(null);
-  const editorRef=useRef<any>(null);
-  const lastValueRef=useRef(value||"");
-  const [ready,setReady]=useState(false);
-  const [loadError,setLoadError]=useState("");
+  const editorRef=useRef<HTMLDivElement>(null);
+  const fileRef=useRef<HTMLInputElement>(null);
+  const savedRangeRef=useRef<Range|null>(null);
+  const [sourceMode,setSourceMode]=useState(false);
+  const [source,setSource]=useState(value||"");
+  const [busy,setBusy]=useState(false);
 
   useEffect(()=>{
-    let cancelled=false;
-    const version="43.3.1";
-    const cssHref=`https://cdn.ckeditor.com/ckeditor5/${version}/ckeditor5.css`;
-    const scriptSrc=`https://cdn.ckeditor.com/ckeditor5/${version}/ckeditor5.umd.js`;
-    const addCss=()=>{
-      if(document.querySelector(`link[data-nayo-ckeditor]`)) return;
-      const link=document.createElement("link");
-      link.rel="stylesheet"; link.href=cssHref; link.dataset.nayoCkeditor="true";
-      document.head.appendChild(link);
-    };
-    const init=async()=>{
-      if(cancelled || !hostRef.current) return;
-      const C=(window as any).CKEDITOR;
-      if(!C?.ClassicEditor) return;
-      try{
-        addCss();
-        // 使用 CKEditor 5 43.3.1 的穩定公開插件集合，避免新版 CDN UMD
-        // 與舊式插件組合造成「e is not a constructor」。
-        const {
-          ClassicEditor,Essentials,Paragraph,Heading,Font,Bold,Italic,Underline,Strikethrough,
-          Link,List,Indent,BlockQuote,Alignment,HorizontalLine,Table,TableToolbar,
-          Image,ImageUpload,ImageToolbar,ImageCaption,ImageStyle,FileRepository,
-          RemoveFormat,SourceEditing,Style,GeneralHtmlSupport
-        }=C;
-        const plugins=[
-          Essentials,Paragraph,Heading,Font,Bold,Italic,Underline,Strikethrough,
-          Link,List,Indent,BlockQuote,Alignment,HorizontalLine,Table,TableToolbar,
-          Image,ImageUpload,ImageToolbar,ImageCaption,ImageStyle,FileRepository,
-          RemoveFormat,SourceEditing,Style,GeneralHtmlSupport
-        ].filter((plugin:any)=>typeof plugin === "function");
+    if(!editorRef.current) return;
+    if(!sourceMode && editorRef.current.innerHTML !== (value||"")) editorRef.current.innerHTML=value||"";
+    if(!sourceMode) setSource(value||"");
+  },[value,sourceMode]);
 
-        const uploadPlugin=(editor:any)=>{
-          const repository=editor.plugins.get("FileRepository");
-          repository.createUploadAdapter=(loader:any)=>({
-            upload:async()=>{
-              const file=await loader.file;
-              const url=await uploadImage(file,folder);
-              return {default:url};
-            },
-            abort:()=>{}
-          });
-        };
-
-        const editor=await ClassicEditor.create(hostRef.current,{
-          plugins,
-          language:"zh",
-          initialData:value||"",
-          placeholder:"開始撰寫文章…",
-          toolbar:{
-            items:[
-              "undo","redo","|","heading","|",
-              "fontFamily","fontSize","fontColor","fontBackgroundColor","|",
-              "bold","italic","underline","strikethrough","removeFormat","|",
-              "alignment","|","bulletedList","numberedList","outdent","indent","|",
-              "link","insertTable","imageUpload","horizontalLine","blockQuote","style","|",
-              "sourceEditing"
-            ],
-            shouldNotGroupWhenFull:true
-          },
-          heading:{options:[
-            {model:"paragraph",title:"段落",class:"ck-heading_paragraph"},
-            {model:"heading1",view:"h1",title:"標題 1（H1）",class:"ck-heading_heading1"},
-            {model:"heading2",view:"h2",title:"標題 2（H2）",class:"ck-heading_heading2"},
-            {model:"heading3",view:"h3",title:"標題 3（H3）",class:"ck-heading_heading3"},
-            {model:"heading4",view:"h4",title:"標題 4（H4）",class:"ck-heading_heading4"}
-          ]},
-          htmlSupport:{allow:[{name:/^(p|h[1-4]|blockquote|ul|ol|li|a|table|thead|tbody|tr|th|td|figure|img|hr)$/ ,attributes:true,classes:true,styles:true}]},
-          style:{definitions:[
-            {name:"引言｜典雅",element:"blockquote",classes:["quote-elegant"]},
-            {name:"引言｜重點",element:"blockquote",classes:["quote-highlight"]},
-            {name:"引言｜提醒",element:"blockquote",classes:["quote-note"]},
-            {name:"重點段落",element:"p",classes:["article-lead"]},
-            {name:"資訊提示框",element:"p",classes:["article-info"]}
-          ]},
-          fontFamily:{options:[
-            "default","Arial, Helvetica, sans-serif","Georgia, serif","Verdana, sans-serif",
-            "Tahoma, sans-serif","Times New Roman, serif","Noto Sans TC, sans-serif"
-          ]},
-          fontSize:{options:[9,10,11,12,14,16,18,20,24,28,32,36]},
-          image:{toolbar:["imageTextAlternative","toggleImageCaption","imageStyle:inline","imageStyle:block","imageStyle:side"]},
-          table:{contentToolbar:["tableColumn","tableRow","mergeTableCells"]},
-          link:{addTargetToExternalLinks:true,defaultProtocol:"https://"},
-          extraPlugins:[uploadPlugin]
-        });
-        if(cancelled){await editor.destroy();return;}
-        editorRef.current=editor;
-        setReady(true);
-        editor.model.document.on("change:data",()=>{
-          const data=editor.getData();
-          lastValueRef.current=data;
-          onChange(data);
-        });
-      }catch(e:any){
-        if(!cancelled)setLoadError(e?.message||"CKEditor 載入失敗，請重新整理頁面後再試。 ");
-      }
-    };
-    addCss();
-    const existing=document.querySelector<HTMLScriptElement>(`script[data-nayo-ckeditor]`);
-    if((window as any).CKEDITOR?.ClassicEditor) init();
-    else if(existing) existing.addEventListener("load",init,{once:true});
-    else{
-      const script=document.createElement("script");
-      script.src=scriptSrc; script.async=true; script.dataset.nayoCkeditor="true";
-      script.onload=init;
-      script.onerror=()=>setLoadError("CKEditor 載入失敗，請確認網路連線。");
-      document.body.appendChild(script);
-    }
-    return()=>{
-      cancelled=true;
-      if(editorRef.current){editorRef.current.destroy();editorRef.current=null;setReady(false);}
-    };
+  useEffect(()=>{
+    if(editorRef.current && !sourceMode && !editorRef.current.innerHTML) editorRef.current.innerHTML=value||"";
   },[]);
 
-  useEffect(()=>{
-    const editor=editorRef.current; if(!editor) return;
-    const next=value||"";
-    if(next!==lastValueRef.current && next!==editor.getData()){
-      editor.setData(next); lastValueRef.current=next;
+  function saveSelection(){
+    const sel=window.getSelection();
+    if(sel && sel.rangeCount) savedRangeRef.current=sel.getRangeAt(0).cloneRange();
+  }
+  function restoreSelection(){
+    const range=savedRangeRef.current;
+    if(!range) return;
+    const sel=window.getSelection();
+    if(sel){sel.removeAllRanges();sel.addRange(range);}
+  }
+  function emit(){
+    const html=editorRef.current?.innerHTML||"";
+    setSource(html);
+    onChange(html);
+  }
+  function command(cmd:string,value?:string){
+    if(sourceMode) return;
+    editorRef.current?.focus();
+    restoreSelection();
+    document.execCommand(cmd,false,value);
+    saveSelection();
+    emit();
+  }
+  function block(tag:string){
+    command("formatBlock",tag);
+  }
+  function applyClass(cls:string,tag:"p"|"blockquote"="p"){
+    if(sourceMode) return;
+    editorRef.current?.focus();
+    restoreSelection();
+    document.execCommand("formatBlock",false,tag);
+    const sel=window.getSelection();
+    let node:any=sel?.anchorNode;
+    while(node && node!==editorRef.current && node.nodeType===3) node=node.parentElement;
+    if(node && node.nodeType===1 && !editorRef.current?.contains(node)) node=null;
+    if(node && node.tagName?.toLowerCase()!==tag) node=node.closest?.(tag);
+    if(node){
+      node.classList.remove("quote-elegant","quote-highlight","quote-note","article-lead","article-info");
+      if(cls) node.classList.add(cls);
     }
-  },[value]);
+    saveSelection();
+    emit();
+  }
+  function addLink(){
+    saveSelection();
+    const url=window.prompt("請輸入連結網址", "https://");
+    if(!url || url==="https://") return;
+    command("createLink",url);
+  }
+  function insertTable(){
+    const html='<table><tbody><tr><td>欄位 1</td><td>欄位 2</td><td>欄位 3</td></tr><tr><td>內容</td><td>內容</td><td>內容</td></tr><tr><td>內容</td><td>內容</td><td>內容</td></tr></tbody></table><p></p>';
+    command("insertHTML",html);
+  }
+  async function handleImage(file:File){
+    try{
+      setBusy(true);
+      const url=await uploadImage(file,folder);
+      command("insertImage",url);
+    }catch(e:any){
+      window.alert(e?.message||"圖片上傳失敗，請稍後再試。");
+    }finally{setBusy(false);}
+  }
+  function toggleSource(){
+    if(sourceMode){
+      if(editorRef.current) editorRef.current.innerHTML=source;
+      setSourceMode(false);
+      onChange(source);
+      requestAnimationFrame(()=>editorRef.current?.focus());
+    }else{
+      const html=editorRef.current?.innerHTML||"";
+      setSource(html);
+      setSourceMode(true);
+    }
+  }
+  const btn=(label:string,fn:()=>void,title?:string)=><button type="button" className="rt-btn" title={title||label} onMouseDown={e=>e.preventDefault()} onClick={fn}>{label}</button>;
+  const select=(value:string,onChangeFn:(v:string)=>void,children:ReactNode,title:string)=><select className="rt-select" title={title} value={value} onFocus={saveSelection} onChange={e=>onChangeFn(e.target.value)}>{children}</select>;
 
-  return <div className="ckeditor-wrap">
-    {!ready && !loadError && <div className="ckeditor-loading">正在載入完整文章編輯器…</div>}
-    {loadError && <div className="ckeditor-error">{loadError}</div>}
-    <div ref={hostRef} className="ckeditor-host" />
-    <div className="ckeditor-note">像 WordPress 一樣直接編輯文章；可使用 H1～H4、字型、字級、顏色、表格、圖片、連結、條列，以及「引言｜典雅／重點／提醒」等引用樣式。</div>
+  return <div className="rich-editor-wrap full">
+    <div className="rt-toolbar">
+      {btn("↶",()=>command("undo"),"復原")}
+      {btn("↷",()=>command("redo"),"重做")}
+      <span className="rt-divider"/>
+      {select("p",v=>block(v),<><option value="p">段落</option><option value="h1">H1 標題</option><option value="h2">H2 標題</option><option value="h3">H3 標題</option><option value="h4">H4 標題</option></>,"段落／標題")}
+      {select("default",v=>command("fontName",v==="default"?"Arial":v),<><option value="default">預設字型</option><option value="Noto Sans TC">Noto Sans TC</option><option value="Arial">Arial</option><option value="Georgia">Georgia</option><option value="Verdana">Verdana</option><option value="Times New Roman">Times New Roman</option></>,"字型")}
+      {select("3",v=>command("fontSize",v),<><option value="1">9 px</option><option value="2">11 px</option><option value="3">14 px</option><option value="4">16 px</option><option value="5">20 px</option><option value="6">28 px</option><option value="7">36 px</option></>,"字級")}
+      <label className="rt-color" title="文字顏色"><span>A</span><input type="color" defaultValue="#3b332f" onMouseDown={saveSelection} onChange={e=>command("foreColor",e.target.value)}/></label>
+      <label className="rt-color" title="背景顏色"><span>▰</span><input type="color" defaultValue="#fff1a8" onMouseDown={saveSelection} onChange={e=>command("hiliteColor",e.target.value)}/></label>
+      <span className="rt-divider"/>
+      {btn("B",()=>command("bold"),"粗體")}
+      {btn("I",()=>command("italic"),"斜體")}
+      {btn("U",()=>command("underline"),"底線")}
+      {btn("S",()=>command("strikeThrough"),"刪除線")}
+      {btn("清除",()=>command("removeFormat"),"清除格式")}
+      <span className="rt-divider"/>
+      {btn("左",()=>command("justifyLeft"),"靠左")}
+      {btn("中",()=>command("justifyCenter"),"置中")}
+      {btn("右",()=>command("justifyRight"),"靠右")}
+      {btn("• 清單",()=>command("insertUnorderedList"),"項目清單")}
+      {btn("1. 清單",()=>command("insertOrderedList"),"編號清單")}
+      {btn("↔",()=>command("indent"),"增加縮排")}
+      {btn("↢",()=>command("outdent"),"減少縮排")}
+      <span className="rt-divider"/>
+      {btn("連結",addLink,"插入連結")}
+      {btn("表格",insertTable,"插入 3×3 表格")}
+      <button type="button" className="rt-btn" disabled={busy} onMouseDown={e=>e.preventDefault()} onClick={()=>{saveSelection();fileRef.current?.click()}}>{busy?"上傳中…":"圖片"}</button>
+      <input ref={fileRef} type="file" accept="image/*" hidden onChange={e=>{const f=e.target.files?.[0];e.currentTarget.value="";if(f)handleImage(f)}}/>
+      <span className="rt-divider"/>
+      {select("",v=>{if(v==="elegant")applyClass("quote-elegant","blockquote");if(v==="highlight")applyClass("quote-highlight","blockquote");if(v==="note")applyClass("quote-note","blockquote");if(v==="lead")applyClass("article-lead","p");if(v==="info")applyClass("article-info","p");},<><option value="">引用／段落樣式</option><option value="elegant">引言｜典雅</option><option value="highlight">引言｜重點</option><option value="note">引言｜提醒</option><option value="lead">重點段落</option><option value="info">資訊提示框</option></>,"引用與特殊段落")}
+      <button type="button" className={`rt-btn source-btn${sourceMode?" active":""}`} onClick={toggleSource}>{sourceMode?"返回編輯":"HTML 原始碼"}</button>
+    </div>
+    {sourceMode ? <textarea className="rt-source" value={source} onChange={e=>{setSource(e.target.value);onChange(e.target.value)}} spellCheck={false}/> : <div ref={editorRef} className="rt-content" contentEditable suppressContentEditableWarning onInput={emit} onKeyUp={saveSelection} onMouseUp={saveSelection} onFocus={saveSelection} data-placeholder="開始撰寫文章…"/>}
+    <div className="ckeditor-note">像 WordPress 一樣直接編輯；文章標題本身是 H1，正文可使用 H2～H4。支援字型、字級、顏色、表格、圖片上傳、連結、條列與「引言｜典雅／重點／提醒」、「重點段落」、「資訊提示框」。</div>
   </div>
 }
 
@@ -1014,7 +1010,7 @@ function EditorHead({title,onSave,onCancel}:{title:string;onSave:()=>void;onCanc
 function Field({label,value,onChange,type="text",full=false}:{label:string;value:any;onChange:(v:string)=>void;type?:string;full?:boolean}){return <label className={full?"field-label full":"field-label"}>{label}<input type={type} value={value??""} onChange={e=>onChange(e.target.value)}/></label>}
 function TextArea({label,value,onChange,full=false}:{label:string;value:any;onChange:(v:string)=>void;full?:boolean}){return <label className={full?"field-label full":"field-label"}>{label}<textarea value={value??""} onChange={e=>onChange(e.target.value)} rows={5}/></label>}
 function ImageField({label,value,onChange,setUrl}:{label:string;value:string;onChange:(f:File)=>void;setUrl:(v:string)=>void}){return <div className="image-field"><div className="image-label">{label}</div>{value&&<img src={value} alt="預覽"/>}<input type="file" accept="image/*" onChange={e=>{const f=e.target.files?.[0];if(f)onChange(f)}}/><input value={value||""} onChange={e=>setUrl(e.target.value)} placeholder="或貼上圖片網址"/></div>}
-function Shell({children}:{children:React.ReactNode}){return <><style>{CSS}{PROMO_CSS}</style>{children}</>}
+function Shell({children}:{children:ReactNode}){return <><style>{CSS}{PROMO_CSS}</style>{children}</>}
 
 
 const PROMO_CSS=`
@@ -1027,6 +1023,6 @@ const CSS=`
 :root{--bg:#f8f4f0;--card:#fffdfb;--ink:#2e2926;--muted:#8c8078;--rose:#b9968a;--rose2:#eadbd5;--line:#e8ddd7}*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--ink)}body{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}button,input,textarea,select{font:inherit}.loading{min-height:100dvh;display:grid;place-items:center;color:var(--muted)}.login-wrap{min-height:100dvh;display:grid;place-items:center;padding:24px}.login-card{width:min(100%,480px);background:var(--card);border:1px solid var(--line);border-radius:28px;padding:42px;box-shadow:0 20px 70px #5d46331a}.brand-mark{width:54px;height:54px;border:1px solid var(--rose2);border-radius:50%;display:grid;place-items:center;font:27px Georgia,serif;color:var(--rose);background:#fff}.brand-mark.small{width:40px;height:40px;font-size:21px}.eyebrow{font-size:12px;letter-spacing:.18em;color:#b67e70;font-weight:800;margin:0 0 9px}.login-card h1,.topbar h1,.welcome h2,.next-card h2,.empty-card h2,.editor h2{font-family:Georgia,"Noto Serif TC",serif}.login-card h1{font-size:40px;margin:0 0 10px}.lead{color:var(--muted);line-height:1.8;margin-bottom:28px}.login-form{display:grid;gap:18px}.login-form label,.field-label{display:grid;gap:8px;font-size:13px;font-weight:700}.login-form input,.field-label input,.field-label textarea,.field{width:100%;border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px 14px;outline:none}.settings-number-card{border:1px solid var(--line);background:#fffaf7;border-radius:14px;padding:14px;display:grid;gap:12px}.settings-number-card>strong{font-size:14px;color:#72584d}.form-section-title{grid-column:1/-1;font-family:Georgia,"Noto Serif TC",serif;font-size:20px;font-weight:700;margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}.field-label textarea{resize:vertical;line-height:1.7}.login-form input:focus,.field-label input:focus,.field-label textarea:focus,.field:focus{border-color:var(--rose);box-shadow:0 0 0 3px #b9968a1a}.primary{border:0;border-radius:12px;padding:14px 18px;background:#3b332f;color:#fff;cursor:pointer;font-weight:700}.primary:disabled{opacity:.6}.compact{padding:11px 16px}.soft-btn{border:1px solid var(--line);background:#fff;border-radius:11px;padding:10px 15px;cursor:pointer}.head-actions{display:flex;gap:9px}.error-box{padding:12px 14px;background:#fff0ee;border:1px solid #efd0ca;color:#a34d42;border-radius:10px;font-size:13px;line-height:1.65;white-space:pre-line}.success-box{padding:12px 14px;background:#eef8f1;border:1px solid #cfe6d6;color:#477254;border-radius:10px;font-size:13px;line-height:1.65;white-space:pre-line}back-link{display:block;margin-top:22px;color:var(--muted);font-size:13px;text-decoration:none}.admin-layout{min-height:100dvh;display:flex}.sidebar{width:260px;background:#302b28;color:#fff;padding:24px 18px;display:flex;flex-direction:column}.side-brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;padding:5px 8px 28px}.side-brand span:last-child{display:grid}.side-brand b{font-size:16px}.side-brand small{font-size:11px;color:#c8b9b1}.side-label{font-size:10px;letter-spacing:.18em;color:#a99991;padding:0 12px 10px}.sidebar nav{display:grid;gap:4px}.nav-item{border:0;background:transparent;color:#d7ccc6;text-align:left;padding:12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:11px;font-size:14px}.nav-item:hover,.nav-item.active{background:#4a403b;color:#fff}.nav-item.active{box-shadow:inset 3px 0 var(--rose)}.side-bottom{margin-top:auto;border-top:1px solid #ffffff16;padding:18px 8px 4px}.admin-user{display:flex;align-items:center;gap:9px}.avatar{width:34px;height:34px;border-radius:50%;background:#efe1da;color:#72584d;display:grid;place-items:center;font-weight:800}.admin-user b,.admin-user small{display:block}.admin-user b{font-size:12px}.admin-user small{font-size:10px;color:#a99b94;max-width:160px;overflow:hidden;text-overflow:ellipsis}.logout{width:100%;margin-top:14px;border:1px solid #ffffff20;background:transparent;color:#cfc3bd;border-radius:9px;padding:9px;cursor:pointer;font-size:12px}.admin-main{flex:1;min-width:0;padding:34px clamp(20px,4vw,56px);max-width:1500px}.topbar{display:flex;justify-content:space-between;align-items:end;margin-bottom:26px}.topbar h1{font-size:34px;margin:0}.view-site{color:#7f665c;text-decoration:none;font-size:13px;border:1px solid var(--line);padding:9px 13px;border-radius:10px;background:#fff}.notice{margin-bottom:18px}.welcome{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(120deg,#fffdfb,#f4e8e2);border:1px solid var(--line);border-radius:22px;padding:28px;margin-bottom:18px}.welcome h2{font-size:25px;margin:7px 0}.welcome p{color:var(--muted);line-height:1.8;margin:0}.pill{display:inline-block;border-radius:999px;background:#fff;color:#967568;border:1px solid var(--rose2);font-size:11px;padding:5px 9px}.welcome-mark{width:80px;height:80px;border-radius:50%;background:#fff;border:1px solid var(--rose2);display:grid;place-items:center;color:var(--rose);font:42px Georgia,serif}
 .editor-help{grid-column:1/-1;margin:-7px 0 4px;color:var(--muted);font-size:12px;line-height:1.7}.crystal-category-bar{display:flex;gap:10px;flex-wrap:wrap;margin:28px 0 8px}.crystal-category-bar button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 17px;color:var(--muted);cursor:pointer}.crystal-category-bar button.active{background:#302b28;color:#fff;border-color:#302b28}.crystal-life-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:28px}.crystal-life-card{min-height:112px;padding:18px}.crystal-life-card .icon{font-size:16px}.crystal-life-card strong{font-size:14px}.crystal-life-card span{font-size:10px}.bracelet-empty{display:none}
 .stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.stat-card{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:20px;text-align:left;cursor:pointer;display:grid;gap:7px}.stat-icon{font-size:18px;color:var(--rose)}.stat-label{font-size:13px;color:var(--muted)}.stat-card strong{font-size:30px}.stat-card small{font-size:11px;color:#a9897d}.next-card,.empty-card,.editor{margin-top:18px;border:1px solid var(--line);background:var(--card);border-radius:22px;padding:28px}.next-card h2{font-size:24px}.next-card p:last-child,.editor-head p{color:var(--muted);line-height:1.8}.editor-head{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:24px}.editor h2{font-size:27px;margin:3px 0}.editor-head p{margin:0}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}.field-label.full{grid-column:1/-1}.image-field{grid-column:1/-1;border:1px dashed #d9c8c0;border-radius:16px;padding:16px;display:grid;gap:10px;background:#fffaf7}.image-label{font-size:13px;font-weight:800}.image-field img{width:180px;height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}.image-field input{width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff}.table-wrap table{border-collapse:collapse;width:100%;min-width:680px}.table-wrap th,.table-wrap td{padding:12px 13px;border-bottom:1px solid #eee5df;text-align:left;font-size:12px;vertical-align:top}.table-wrap th{background:#fbf6f2;color:#7d6f68;font-size:11px}.table-wrap tr:last-child td{border-bottom:0}.table-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 9px;font-size:11px;cursor:pointer;margin-right:6px}.table-btn.danger{color:#a34d42}.empty-row,.loading-box{padding:50px 20px;text-align:center;color:var(--muted);border:1px dashed #dfd1c9;border-radius:14px;background:#fffaf7}@media(max-width:900px){.sidebar{width:82px;padding:18px 10px}.side-brand span:last-child,.side-label{display:none}.side-brand{justify-content:center}.nav-item{justify-content:center;font-size:0}.nav-item span{display:none}.nav-item::first-letter{font-size:18px}.admin-user>div:last-child,.logout{display:none}.stats-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.admin-layout{display:block}.sidebar{position:sticky;top:0;z-index:20;width:100%;height:auto;display:flex;flex-direction:row;padding:8px 10px;overflow:auto}.side-brand{padding:0 8px}.sidebar nav{display:flex}.nav-item{min-width:56px}.side-bottom{display:none}.admin-main{padding:22px 14px}.topbar h1{font-size:28px}.welcome{padding:20px}.welcome-mark{display:none}.form-grid{grid-template-columns:1fr}.field-label.full,.image-field{grid-column:auto}.editor-head{align-items:flex-start;flex-direction:column}.head-actions{width:100%}.head-actions button{flex:1}.stats-grid{gap:9px}.stat-card{padding:15px}.login-card{padding:30px 22px}}
-.ckeditor-wrap{grid-column:1/-1;border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 8px 30px #5d46330b}.ckeditor-host{min-height:520px}.ckeditor-loading,.ckeditor-error{padding:18px;color:var(--muted);font-size:13px;background:#fffaf7;border-bottom:1px solid var(--line)}.ckeditor-error{color:#a34d42;background:#fff0ee}.ckeditor-note{padding:10px 14px;color:var(--muted);font-size:11px;background:#fbf6f2;border-top:1px solid var(--line)}.ckeditor-wrap .ck.ck-editor{border:0}.ckeditor-wrap .ck.ck-toolbar{border:0;border-bottom:1px solid var(--line);background:#fffdfb;padding:8px}.ckeditor-wrap .ck.ck-editor__main>.ck-editor__editable{min-height:520px;border:0!important;box-shadow:none!important;padding:24px 28px}.ckeditor-wrap .ck-content{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;font-size:16px;line-height:1.9;color:var(--ink)}.ckeditor-wrap .ck-content h2,.ckeditor-wrap .ck-content h3,.ckeditor-wrap .ck-content h4{font-family:Georgia,"Noto Serif TC",serif;color:var(--ink)}.ckeditor-wrap .ck-content img{max-width:100%}.ckeditor-wrap .ck-content table{width:100%}@media(max-width:700px){.ckeditor-wrap .ck.ck-toolbar{padding:5px}.ckeditor-wrap .ck.ck-editor__main>.ck-editor__editable{min-height:420px;padding:18px}.ckeditor-wrap .ck.ck-toolbar{max-height:132px;overflow:auto}.ckeditor-note{font-size:10px}}
+.rich-editor-wrap{grid-column:1/-1;border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 8px 30px #5d46330b}.rt-toolbar{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:9px 10px;border-bottom:1px solid var(--line);background:#fffdfb}.rt-btn,.rt-select{height:34px;border:1px solid #e1d5ce;background:#fff;border-radius:8px;color:#4b403b;font-size:12px;cursor:pointer;padding:0 9px}.rt-btn:hover,.rt-select:hover{border-color:#c6aaa0;background:#fffaf7}.rt-btn.active{background:#3b332f;color:#fff;border-color:#3b332f}.rt-btn:disabled{opacity:.55;cursor:wait}.rt-select{min-width:84px}.rt-divider{width:1px;height:24px;background:#e5dcd7;margin:0 2px}.rt-color{height:34px;min-width:34px;border:1px solid #e1d5ce;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-weight:800;font-size:13px}.rt-color input{width:18px;height:20px;border:0;padding:0;background:transparent;cursor:pointer}.rt-content{min-height:520px;padding:24px 28px;outline:none;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;font-size:16px;line-height:1.9;color:var(--ink)}.rt-content:empty:before{content:attr(data-placeholder);color:#b7aaa3}.rt-content h1,.rt-content h2,.rt-content h3,.rt-content h4{font-family:Georgia,"Noto Serif TC",serif;color:var(--ink);line-height:1.35;margin:1.2em 0 .55em}.rt-content h1{font-size:32px}.rt-content h2{font-size:27px}.rt-content h3{font-size:22px}.rt-content h4{font-size:18px}.rt-content p{margin:.65em 0}.rt-content ul,.rt-content ol{padding-left:2em}.rt-content blockquote{margin:18px 0;padding:14px 18px;border-left:4px solid #cda99d;background:#fbf6f2;border-radius:8px}.rt-content blockquote.quote-elegant{font-family:Georgia,"Noto Serif TC",serif;color:#6d5950;font-style:italic;background:#faf6f3}.rt-content blockquote.quote-highlight{border-left-color:#b47d6f;background:#fff1ed;font-weight:700}.rt-content blockquote.quote-note{border-left-color:#d5ad5e;background:#fff9e9}.rt-content p.article-lead{font-size:19px;font-weight:700;color:#5c4b44;background:#fbf6f2;padding:14px 16px;border-radius:10px}.rt-content p.article-info{padding:13px 16px;border:1px solid #eadbd3;background:#fffaf7;border-radius:10px}.rt-content a{color:#9b6c5f;text-decoration:underline}.rt-content img{display:block;max-width:100%;height:auto;margin:16px auto;border-radius:10px}.rt-content table{border-collapse:collapse;width:100%;margin:18px 0}.rt-content th,.rt-content td{border:1px solid #dcd1cb;padding:10px 12px;min-width:70px;text-align:left}.rt-content th{background:#fbf6f2;font-weight:700}.rt-source{display:block;width:100%;min-height:520px;border:0;outline:none;resize:vertical;padding:24px 28px;font:14px/1.8 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;color:#4b403b;background:#fff}.ckeditor-note{padding:10px 14px;color:var(--muted);font-size:11px;line-height:1.6;background:#fbf6f2;border-top:1px solid var(--line)}@media(max-width:700px){.rt-toolbar{padding:7px;max-height:190px;overflow:auto}.rt-btn,.rt-select,.rt-color{height:32px;font-size:11px}.rt-content,.rt-source{min-height:420px;padding:18px}.rt-content h1{font-size:27px}.rt-content h2{font-size:24px}.rt-content h3{font-size:20px}.ckeditor-note{font-size:10px}}
 `;
 export const ADMIN_CSS = CSS + PROMO_CSS;
