@@ -611,7 +611,7 @@ function CrystalPageEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string
       <Field label="頁面標題" value={form.crystal_page_title} onChange={v=>set("crystal_page_title",v)}/>
       <TextArea label="頁面說明" value={form.crystal_page_description} onChange={v=>set("crystal_page_description",v)} full/>
       <div className="form-section-title">生命靈數 1～9</div>
-      {Array.from({length:9},(_,i)=>i+1).map(n=><div key={n} className="settings-number-card"><strong>生命靈數 {n}</strong><Field label="卡片標題" value={form[`life_${n}_title`]} onChange={v=>set(`life_${n}_title`,v)}/><Field label="卡片小字" value={form[`life_${n}_subtitle`]} onChange={v=>set(`life_${n}_subtitle`,v)}/></div>)}
+      {Array.from({length:9},(_,i)=>i+1).map(n=><div key={n} className="settings-number-card"><strong>生命靈數 {n}</strong><Field label="卡片標題" value={form[`life_${n}_title`]} onChange={v=>set(`life_${n}_title`,v)}/><Field label="卡片小字" value={form[`life_${n}_subtitle`]} onChange={v=>set(`life_${n}_subtitle`,v)}/><a className="number-content-edit" href={`/admin/crystal/number/${n}`}>編輯生命靈數 {n} 內容頁 →</a></div>)}
       <div className="form-section-title">Crystal 中間文章區塊</div>
       <div className="crystal-section-picker">
         <div className="crystal-section-picker-head"><strong>選擇要顯示的文章分類</strong><button type="button" className="secondary" onClick={addArticleCategory} disabled={!blogCategories.some(c=>!selectedArticleCategories().includes(c.slug))}>＋新增分類區塊</button></div>
@@ -858,7 +858,7 @@ function PostForm({row,cats,onSave,onCancel,onUpload}:{row:Row;cats:Row[];onSave
   </section>
 }
 
-function RichTextEditor({value,onChange}:{value:string;onChange:(v:string)=>void}){
+export function RichTextEditor({value,onChange,folder="posts"}:{value:string;onChange:(v:string)=>void;folder?:string}){
   const hostRef=useRef<HTMLDivElement>(null);
   const editorRef=useRef<any>(null);
   const lastValueRef=useRef(value||"");
@@ -888,13 +888,13 @@ function RichTextEditor({value,onChange}:{value:string;onChange:(v:string)=>void
           ClassicEditor,Essentials,Paragraph,Heading,Font,Bold,Italic,Underline,Strikethrough,
           Link,List,Indent,BlockQuote,Alignment,HorizontalLine,Table,TableToolbar,
           Image,ImageUpload,ImageToolbar,ImageCaption,ImageStyle,FileRepository,
-          RemoveFormat,SourceEditing,Style
+          RemoveFormat,SourceEditing,Style,GeneralHtmlSupport
         }=C;
         const plugins=[
           Essentials,Paragraph,Heading,Font,Bold,Italic,Underline,Strikethrough,
           Link,List,Indent,BlockQuote,Alignment,HorizontalLine,Table,TableToolbar,
           Image,ImageUpload,ImageToolbar,ImageCaption,ImageStyle,FileRepository,
-          RemoveFormat,SourceEditing,Style
+          RemoveFormat,SourceEditing,Style,GeneralHtmlSupport
         ].filter((plugin:any)=>typeof plugin === "function");
 
         const uploadPlugin=(editor:any)=>{
@@ -902,7 +902,7 @@ function RichTextEditor({value,onChange}:{value:string;onChange:(v:string)=>void
           repository.createUploadAdapter=(loader:any)=>({
             upload:async()=>{
               const file=await loader.file;
-              const url=await uploadImage(file,"posts");
+              const url=await uploadImage(file,folder);
               return {default:url};
             },
             abort:()=>{}
@@ -932,6 +932,7 @@ function RichTextEditor({value,onChange}:{value:string;onChange:(v:string)=>void
             {model:"heading3",view:"h3",title:"標題 3（H3）",class:"ck-heading_heading3"},
             {model:"heading4",view:"h4",title:"標題 4（H4）",class:"ck-heading_heading4"}
           ]},
+          htmlSupport:{allow:[{name:/^(p|h[1-4]|blockquote|ul|ol|li|a|table|thead|tbody|tr|th|td|figure|img|hr)$/ ,attributes:true,classes:true,styles:true}]},
           style:{definitions:[
             {name:"引言｜典雅",element:"blockquote",classes:["quote-elegant"]},
             {name:"引言｜重點",element:"blockquote",classes:["quote-highlight"]},
@@ -1028,3 +1029,4 @@ const CSS=`
 .stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.stat-card{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:20px;text-align:left;cursor:pointer;display:grid;gap:7px}.stat-icon{font-size:18px;color:var(--rose)}.stat-label{font-size:13px;color:var(--muted)}.stat-card strong{font-size:30px}.stat-card small{font-size:11px;color:#a9897d}.next-card,.empty-card,.editor{margin-top:18px;border:1px solid var(--line);background:var(--card);border-radius:22px;padding:28px}.next-card h2{font-size:24px}.next-card p:last-child,.editor-head p{color:var(--muted);line-height:1.8}.editor-head{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:24px}.editor h2{font-size:27px;margin:3px 0}.editor-head p{margin:0}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}.field-label.full{grid-column:1/-1}.image-field{grid-column:1/-1;border:1px dashed #d9c8c0;border-radius:16px;padding:16px;display:grid;gap:10px;background:#fffaf7}.image-label{font-size:13px;font-weight:800}.image-field img{width:180px;height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}.image-field input{width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff}.table-wrap table{border-collapse:collapse;width:100%;min-width:680px}.table-wrap th,.table-wrap td{padding:12px 13px;border-bottom:1px solid #eee5df;text-align:left;font-size:12px;vertical-align:top}.table-wrap th{background:#fbf6f2;color:#7d6f68;font-size:11px}.table-wrap tr:last-child td{border-bottom:0}.table-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 9px;font-size:11px;cursor:pointer;margin-right:6px}.table-btn.danger{color:#a34d42}.empty-row,.loading-box{padding:50px 20px;text-align:center;color:var(--muted);border:1px dashed #dfd1c9;border-radius:14px;background:#fffaf7}@media(max-width:900px){.sidebar{width:82px;padding:18px 10px}.side-brand span:last-child,.side-label{display:none}.side-brand{justify-content:center}.nav-item{justify-content:center;font-size:0}.nav-item span{display:none}.nav-item::first-letter{font-size:18px}.admin-user>div:last-child,.logout{display:none}.stats-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.admin-layout{display:block}.sidebar{position:sticky;top:0;z-index:20;width:100%;height:auto;display:flex;flex-direction:row;padding:8px 10px;overflow:auto}.side-brand{padding:0 8px}.sidebar nav{display:flex}.nav-item{min-width:56px}.side-bottom{display:none}.admin-main{padding:22px 14px}.topbar h1{font-size:28px}.welcome{padding:20px}.welcome-mark{display:none}.form-grid{grid-template-columns:1fr}.field-label.full,.image-field{grid-column:auto}.editor-head{align-items:flex-start;flex-direction:column}.head-actions{width:100%}.head-actions button{flex:1}.stats-grid{gap:9px}.stat-card{padding:15px}.login-card{padding:30px 22px}}
 .ckeditor-wrap{grid-column:1/-1;border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 8px 30px #5d46330b}.ckeditor-host{min-height:520px}.ckeditor-loading,.ckeditor-error{padding:18px;color:var(--muted);font-size:13px;background:#fffaf7;border-bottom:1px solid var(--line)}.ckeditor-error{color:#a34d42;background:#fff0ee}.ckeditor-note{padding:10px 14px;color:var(--muted);font-size:11px;background:#fbf6f2;border-top:1px solid var(--line)}.ckeditor-wrap .ck.ck-editor{border:0}.ckeditor-wrap .ck.ck-toolbar{border:0;border-bottom:1px solid var(--line);background:#fffdfb;padding:8px}.ckeditor-wrap .ck.ck-editor__main>.ck-editor__editable{min-height:520px;border:0!important;box-shadow:none!important;padding:24px 28px}.ckeditor-wrap .ck-content{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;font-size:16px;line-height:1.9;color:var(--ink)}.ckeditor-wrap .ck-content h2,.ckeditor-wrap .ck-content h3,.ckeditor-wrap .ck-content h4{font-family:Georgia,"Noto Serif TC",serif;color:var(--ink)}.ckeditor-wrap .ck-content img{max-width:100%}.ckeditor-wrap .ck-content table{width:100%}@media(max-width:700px){.ckeditor-wrap .ck.ck-toolbar{padding:5px}.ckeditor-wrap .ck.ck-editor__main>.ck-editor__editable{min-height:420px;padding:18px}.ckeditor-wrap .ck.ck-toolbar{max-height:132px;overflow:auto}.ckeditor-note{font-size:10px}}
 `;
+export const ADMIN_CSS = CSS + PROMO_CSS;

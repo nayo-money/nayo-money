@@ -38,6 +38,12 @@ export default async function LifeNumberPage({ params }: { params: Promise<{ num
       <h1>{title}</h1>
       <p className="page-intro">{subtitle}</p>
 
+      {settings[`life_${safeNumber}_content`] && (
+        <section className="life-number-content post-content">
+          <div dangerouslySetInnerHTML={{ __html: settings[`life_${safeNumber}_content`] }} />
+        </section>
+      )}
+
       <section className="life-number-detail" id="life-detail">
         <div className="section-kicker">生命靈數 {safeNumber}</div>
         <h2>適合你的水晶</h2>
