@@ -508,3 +508,12 @@
 .post-content{max-width:none;width:100%;margin:28px 0 0;}
 .post-updated{color:#948984;font-size:12px;margin:8px 0 0;}
 @media(max-width:700px){.post-content{width:100%;margin-top:20px}.post-updated{font-size:12px}}
+
+/* FINAL: 修正首頁最新文章封面與文字重疊。封面固定高度，文字區獨立排版。 */
+.article-cover{height:155px!important;min-height:155px!important;max-height:155px!important;display:block!important;position:relative;overflow:hidden;flex:none;}
+.article-cover img{display:block!important;width:100%!important;height:155px!important;min-height:155px!important;max-height:155px!important;object-fit:cover!important;}
+.article-body{display:block;position:relative;clear:both;background:#fffdfb;}
+@media(max-width:700px){
+  .article-cover{height:155px!important;min-height:155px!important;max-height:155px!important;}
+  .article-cover img{height:155px!important;min-height:155px!important;max-height:155px!important;}
+}
