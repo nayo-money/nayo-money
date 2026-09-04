@@ -882,9 +882,9 @@ function RichTextEditor({value,onChange}:{value:string;onChange:(v:string)=>void
           ClassicEditor,Essentials,Paragraph,Heading,Font,Bold,Italic,Underline,Strikethrough,Subscript,Superscript,Code,
           Link,AutoLink,List,Indent,IndentBlock,BlockQuote,Alignment,HorizontalLine,Table,TableToolbar,MediaEmbed,
           Image,ImageUpload,ImageToolbar,ImageCaption,ImageStyle,ImageResize,FileRepository,FindAndReplace,SelectAll,
-          RemoveFormat,SpecialCharacters,SpecialCharactersEssentials,SourceEditing,ShowBlocks,CodeBlock,Autoformat,PasteFromOffice
+          RemoveFormat,SpecialCharacters,SpecialCharactersEssentials,SourceEditing,ShowBlocks,CodeBlock,Autoformat,PasteFromOffice,Style,GeneralHtmlSupport
         }=C;
-        const plugins=[Essentials,Paragraph,Heading,Font,Bold,Italic,Underline,Strikethrough,Subscript,Superscript,Code,Link,AutoLink,List,Indent,IndentBlock,BlockQuote,Alignment,HorizontalLine,Table,TableToolbar,MediaEmbed,Image,ImageUpload,ImageToolbar,ImageCaption,ImageStyle,ImageResize,FileRepository,FindAndReplace,SelectAll,RemoveFormat,SpecialCharacters,SpecialCharactersEssentials,SourceEditing,ShowBlocks,CodeBlock,Autoformat,PasteFromOffice].filter(Boolean);
+        const plugins=[Essentials,Paragraph,Heading,Font,Bold,Italic,Underline,Strikethrough,Subscript,Superscript,Code,Link,AutoLink,List,Indent,IndentBlock,BlockQuote,Alignment,HorizontalLine,Table,TableToolbar,MediaEmbed,Image,ImageUpload,ImageToolbar,ImageCaption,ImageStyle,ImageResize,FileRepository,FindAndReplace,SelectAll,RemoveFormat,SpecialCharacters,SpecialCharactersEssentials,SourceEditing,ShowBlocks,CodeBlock,Autoformat,PasteFromOffice,Style,GeneralHtmlSupport].filter(Boolean);
         const uploadPlugin=(editor:any)=>{
           const repository=editor.plugins.get("FileRepository");
           repository.createUploadAdapter=(loader:any)=>({
@@ -907,16 +907,24 @@ function RichTextEditor({value,onChange}:{value:string;onChange:(v:string)=>void
               "heading","|","fontFamily","fontSize","fontColor","fontBackgroundColor","|",
               "bold","italic","underline","strikethrough","subscript","superscript","code","removeFormat","|",
               "alignment","|","bulletedList","numberedList","outdent","indent","|",
-              "link","insertTable","mediaEmbed","imageUpload","horizontalLine","specialCharacters","blockQuote","codeBlock","|",
+              "link","insertTable","mediaEmbed","imageUpload","horizontalLine","specialCharacters","blockQuote","style","codeBlock","|",
               "sourceEditing","showBlocks"
             ],
             shouldNotGroupWhenFull:true
           },
           heading:{options:[
             {model:"paragraph",title:"段落",class:"ck-heading_paragraph"},
-            {model:"heading2",view:"h2",title:"標題 2",class:"ck-heading_heading2"},
-            {model:"heading3",view:"h3",title:"標題 3",class:"ck-heading_heading3"},
-            {model:"heading4",view:"h4",title:"標題 4",class:"ck-heading_heading4"}
+            {model:"heading1",view:"h1",title:"標題 1（H1）",class:"ck-heading_heading1"},
+            {model:"heading2",view:"h2",title:"標題 2（H2）",class:"ck-heading_heading2"},
+            {model:"heading3",view:"h3",title:"標題 3（H3）",class:"ck-heading_heading3"},
+            {model:"heading4",view:"h4",title:"標題 4（H4）",class:"ck-heading_heading4"}
+          ]},
+          style:{definitions:[
+            {name:"引言｜典雅",element:"blockquote",classes:["quote-elegant"]},
+            {name:"引言｜重點",element:"blockquote",classes:["quote-highlight"]},
+            {name:"引言｜提醒",element:"blockquote",classes:["quote-note"]},
+            {name:"重點段落",element:"p",classes:["article-lead"]},
+            {name:"資訊提示框",element:"p",classes:["article-info"]}
           ]},
           fontFamily:{options:["default","Arial, Helvetica, sans-serif","Georgia, serif","Verdana, sans-serif","Tahoma, sans-serif","Times New Roman, serif","Noto Sans TC, sans-serif"]},
           fontSize:{options:[9,10,11,12,14,16,18,20,24,28,32,36]},
@@ -928,7 +936,7 @@ function RichTextEditor({value,onChange}:{value:string;onChange:(v:string)=>void
         if(cancelled){editor.destroy();return;}
         editorRef.current=editor; setReady(true);
         editor.model.document.on("change:data",()=>{const data=editor.getData();lastValueRef.current=data;onChange(data);});
-      }catch(e:any){if(!cancelled)setLoadError(e?.message||"CKEditor 載入失敗。請在 Vercel 設定 NEXT_PUBLIC_CKEDITOR_LICENSE_KEY。CKEditor 5 載入失敗。");}
+      }catch(e:any){if(!cancelled)setLoadError(e?.message||"CKEditor 載入失敗。請確認網路連線與瀏覽器設定。");}
     };
     addCss();
     const addTranslation=()=>{
