@@ -488,3 +488,23 @@
   .promo-page-grid{display:block;margin-top:28px}
   .promo-page-card{width:88vw;max-width:390px;margin:0 auto 20px}
 }
+
+/* SEO article TOC */
+.post-toc{margin:28px 0;padding:20px 22px;border:1px solid var(--line);background:#fbf6f2;border-radius:16px}
+.post-toc-title{font-weight:800;font-size:16px;margin-bottom:10px;color:var(--ink)}
+.post-toc ol{margin:0;padding-left:22px;display:grid;gap:7px}
+.post-toc li{line-height:1.6;font-size:14px}
+.post-toc li.toc-level-3{padding-left:14px;font-size:13px}
+.post-toc li.toc-level-4{padding-left:28px;font-size:12px}
+.post-toc a{color:#765f56;text-decoration:none}
+.post-toc a:hover{text-decoration:underline}
+.post-content h2,.post-content h3,.post-content h4{scroll-margin-top:90px}
+
+
+/* CMS SEO status */
+.seo-panel{grid-column:1/-1;display:grid;grid-template-columns:minmax(260px,1fr) minmax(320px,1.2fr);gap:18px;padding:18px 20px;border:1px solid #eadbd3;background:#fbf6f2;border-radius:16px}.seo-panel p{margin:7px 0 0;color:var(--muted);font-size:12px;line-height:1.7}.seo-score{display:block;font-size:30px;margin-top:4px}.seo-checks{display:flex;align-content:flex-start;flex-wrap:wrap;gap:7px}.seo-checks span{padding:7px 9px;border-radius:999px;font-size:11px}.seo-ok{background:#edf7f1;color:#38735a}.seo-warn{background:#fff4ec;color:#9b6c5f}@media(max-width:700px){.seo-panel{grid-template-columns:1fr}}
+
+/* Article detail: title rail and body use the same content width; show explicit update date. */
+.post-content{max-width:none;width:100%;margin:28px 0 0;}
+.post-updated{color:#948984;font-size:12px;margin:8px 0 0;}
+@media(max-width:700px){.post-content{width:100%;margin-top:20px}.post-updated{font-size:12px}}

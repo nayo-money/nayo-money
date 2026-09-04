@@ -829,14 +829,59 @@ function PostsEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string)=>voi
 function PostForm({row,cats,onSave,onCancel,onUpload}:{row:Row;cats:Row[];onSave:(r:Row)=>void;onCancel:()=>void;onUpload:(f:File)=>Promise<void>}){
   const [x,setX]=useState(row);
   const set=(k:string,v:any)=>setX({...x,[k]:v});
+  function autoSlug(title:string){
+    return String(title||"").trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-+|-+$/g,"").slice(0,120);
+  }
+  function plainText(html:string){
+    if(typeof document!=="undefined"){const el=document.createElement("div");el.innerHTML=html||"";return (el.textContent||"").replace(/\s+/g," ").trim();}
+    return String(html||"").replace(/<[^>]+>/g," ").replace(/&nbsp;/g," ").replace(/\s+/g," ").trim();
+  }
+  function autoDescription(title:string,excerpt:string,content:string){
+    const text=plainText(content);
+    const base=String(excerpt||"").trim() || text;
+    return `${title||""}${base?"｜":""}${base}`.replace(/\s+/g," ").slice(0,155);
+  }
+  function autoKeywords(title:string,content:string,category:string){
+    const text=plainText(content);
+    const source=`${title} ${category} ${text}`;
+    const candidates=new Set<string>();
+    const cjk=source.match(/[\p{Script=Han}]{2,12}/gu)||[];
+    cjk.forEach(v=>{if(v.length>=2)candidates.add(v)});
+    const latin=source.match(/[A-Za-z][A-Za-z0-9+.#-]{1,30}/g)||[];
+    latin.forEach(v=>candidates.add(v));
+    [title,category,"信用卡","回饋","理財","優惠","推薦","申辦條件","完整整理","2026"].forEach(v=>{if(String(v||"").trim())candidates.add(String(v).trim())});
+    return Array.from(candidates).slice(0,15).join(", ");
+  }
   function save(){
     const next={...x};
-    if(!String(next.seo_title||"").trim()) next.seo_title=next.title||"";
-    if(!String(next.seo_description||"").trim()) next.seo_description=next.excerpt||"";
+    const title=String(next.title||"").trim();
+    const content=String(next.content||"");
+    if(!String(next.slug||"").trim()) next.slug=autoSlug(title) || `post-${Date.now()}`;
+    if(!String(next.seo_title||"").trim()) next.seo_title=title.slice(0,70);
+    if(!String(next.seo_description||"").trim()) next.seo_description=autoDescription(title,String(next.excerpt||""),content);
+    if(!String(next.seo_keywords||"").trim()) next.seo_keywords=autoKeywords(title,content,String(cats.find(c=>c.id===next.category_id)?.name||""));
     onSave(next);
   }
+  const seoTitle=String(x.seo_title||x.title||"").trim();
+  const seoDescription=String(x.seo_description||x.excerpt||"").trim();
+  const headingCount=(String(x.content||"").match(/<h[2-4]\b/gi)||[]).length;
+  const seoChecks=[
+    ["文章標題",!!String(x.title||"").trim()],
+    ["SEO 標題",seoTitle.length>=20&&seoTitle.length<=70],
+    ["SEO 描述",seoDescription.length>=50&&seoDescription.length<=160],
+    ["SEO 關鍵字",!!String(x.seo_keywords||"").trim()],
+    ["文章網址 Slug",!!String(x.slug||"").trim()],
+    ["文章摘要",!!String(x.excerpt||"").trim()],
+    ["H2～H4 文章結構",headingCount>=2],
+    ["封面圖片",!!String(x.cover_image||"").trim()],
+  ];
+  const seoScore=Math.round(seoChecks.filter(v=>v[1]).length/seoChecks.length*100);
   return <section className="editor">
     <EditorHead title={x.id?"編輯文章":"新增文章"} onSave={save} onCancel={onCancel}/>
+    <div className="seo-panel full">
+      <div><span className="eyebrow">SEO CHECK</span><strong className="seo-score">{seoScore}/100</strong><p>發布時會自動補齊空白的 SEO 標題、描述、關鍵字與 Slug；文章內的 H2～H4 會自動生成可點擊的文章目錄，並輸出 Article Schema 與 Sitemap。</p></div>
+      <div className="seo-checks">{seoChecks.map(([label,ok])=><span key={String(label)} className={ok?"seo-ok":"seo-warn"}>{ok?"✓":"○"} {label}</span>)}</div>
+    </div>
     <div className="form-grid">
       <Field label="標題（文章主標題）" value={x.title} onChange={v=>set("title",v)} full/>
       <Field label="Slug（網址名稱）" value={x.slug} onChange={v=>set("slug",v)}/>
