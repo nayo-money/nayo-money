@@ -1,0 +1,1 @@
+-- 已整合至 PRODUCTS_SETUP.sql，請執行 PRODUCTS_SETUP.sql。
