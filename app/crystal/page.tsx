@@ -68,8 +68,9 @@ export default async function Crystal({ searchParams }: { searchParams?: Promise
   }
 
   if (menu?.pageLinks?.length) lifeLinks = menu.pageLinks;
-  const pageTitle = menu?.label || settings.crystal_page_title || "生命靈數 × 水晶";
-  const pageDescription = menu?.pageDescription || settings.crystal_page_description || "從缺數認識自己，再挑選適合自己的水晶。";
+  const pageEyebrow = settings.crystal_page_eyebrow || "NAYO CRYSTAL";
+  const pageTitle = settings.crystal_page_title || "生命靈數 × 水晶";
+  const pageDescription = settings.crystal_page_description || "從缺數認識自己，再挑選適合自己的水晶。";
   const crystalChildren = menu?.children || [];
   const buyMenu = crystalChildren.find(x => x.id === "crystal-buy" || x.url === "/crystal/buy");
   const buyButton = buyMenu?.label ? `${buyMenu.label} →` : "購買須知 →";
@@ -87,7 +88,7 @@ export default async function Crystal({ searchParams }: { searchParams?: Promise
 
   return (
     <main className="container page">
-      <div className="eyebrow">NAYO CRYSTAL</div>
+      <div className="eyebrow">{pageEyebrow}</div>
       <h1>{pageTitle}</h1>
       <p className="page-intro">{pageDescription}</p>
 
@@ -95,8 +96,8 @@ export default async function Crystal({ searchParams }: { searchParams?: Promise
         {lifeLinks.map((link, index) => (
           <Link className="category crystal-life-card" href={(link.url && !String(link.url).startsWith("#number-")) ? link.url : `/crystal/number/${index + 1}`} key={link.id}>
             <div className="icon">✦</div>
-            <strong>{link.label}</strong>
-            <span>查看對應內容</span>
+            <strong>{settings[`life_${index + 1}_card_title`] || settings[`life_${index + 1}_title`] || link.label || `生命靈數 ${index + 1}`}</strong>
+            <span>{settings[`life_${index + 1}_card_subtitle`] || settings[`life_${index + 1}_subtitle`] || "查看對應水晶"}</span>
           </Link>
         ))}
       </div>

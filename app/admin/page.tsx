@@ -573,15 +573,15 @@ function CrystalPageEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string
     crystal_page_eyebrow:"NAYO CRYSTAL",
     crystal_page_title:"生命靈數 × 水晶",
     crystal_page_description:"從缺數認識自己，再挑選適合自己的水晶。水晶內容與手環作品都可以從管理後台更新。",
-    life_1_title:"生命靈數 1", life_1_subtitle:"查看對應水晶",
-    life_2_title:"生命靈數 2", life_2_subtitle:"查看對應水晶",
-    life_3_title:"生命靈數 3", life_3_subtitle:"查看對應水晶",
-    life_4_title:"生命靈數 4", life_4_subtitle:"查看對應水晶",
-    life_5_title:"生命靈數 5", life_5_subtitle:"查看對應水晶",
-    life_6_title:"生命靈數 6", life_6_subtitle:"查看對應水晶",
-    life_7_title:"生命靈數 7", life_7_subtitle:"查看對應水晶",
-    life_8_title:"生命靈數 8", life_8_subtitle:"查看對應水晶",
-    life_9_title:"生命靈數 9", life_9_subtitle:"查看對應水晶",
+    life_1_title:"生命靈數 1", life_1_subtitle:"查看對應水晶", life_1_card_title:"生命靈數 1", life_1_card_subtitle:"查看對應水晶",
+    life_2_title:"生命靈數 2", life_2_subtitle:"查看對應水晶", life_2_card_title:"生命靈數 2", life_2_card_subtitle:"查看對應水晶",
+    life_3_title:"生命靈數 3", life_3_subtitle:"查看對應水晶", life_3_card_title:"生命靈數 3", life_3_card_subtitle:"查看對應水晶",
+    life_4_title:"生命靈數 4", life_4_subtitle:"查看對應水晶", life_4_card_title:"生命靈數 4", life_4_card_subtitle:"查看對應水晶",
+    life_5_title:"生命靈數 5", life_5_subtitle:"查看對應水晶", life_5_card_title:"生命靈數 5", life_5_card_subtitle:"查看對應水晶",
+    life_6_title:"生命靈數 6", life_6_subtitle:"查看對應水晶", life_6_card_title:"生命靈數 6", life_6_card_subtitle:"查看對應水晶",
+    life_7_title:"生命靈數 7", life_7_subtitle:"查看對應水晶", life_7_card_title:"生命靈數 7", life_7_card_subtitle:"查看對應水晶",
+    life_8_title:"生命靈數 8", life_8_subtitle:"查看對應水晶", life_8_card_title:"生命靈數 8", life_8_card_subtitle:"查看對應水晶",
+    life_9_title:"生命靈數 9", life_9_subtitle:"查看對應水晶", life_9_card_title:"生命靈數 9", life_9_card_subtitle:"查看對應水晶",
     bracelet_kicker:"CUSTOM BRACELETS", bracelet_title:"缺數手環作品", bracelet_button:"購買須知 →", bracelet_url:"/crystal/buy",
     bracelet_categories_json:"[\"全部\"]",
     crystal_article_categories_json:"[\"credit-card\",\"finance\",\"lifestyle\",\"crystal\"]",
@@ -595,7 +595,8 @@ function CrystalPageEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string
   };
   const [form,setForm]=useState<Row>(defaults); const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false);
   const [blogCategories,setBlogCategories]=useState<{id:string;name:string;slug:string}[]>([]);
-  useEffect(()=>{(async()=>{if(!supabase){setLoading(false);return;} const [settingsResult,categoriesResult]=await Promise.all([adminSupabase.from("site_settings").select("setting_key,setting_value"),adminSupabase.from("categories").select("id,name,slug,type,is_active,sort_order").eq("type","blog").eq("is_active",true).order("sort_order")]); if(settingsResult.error){fail(settingsResult.error.message);setLoading(false);return;} if(categoriesResult.error){fail(categoriesResult.error.message);setLoading(false);return;} const next={...defaults}; for(const r of settingsResult.data||[]){if(r.setting_key)next[r.setting_key]=r.setting_value??"";} setForm(next); setBlogCategories((categoriesResult.data||[]) as {id:string;name:string;slug:string}[]); setLoading(false);})()},[fail]);
+  const [crystalOptions,setCrystalOptions]=useState<{id:string;name:string;color?:string|null}[]>([]);
+  useEffect(()=>{(async()=>{if(!supabase){setLoading(false);return;} const [settingsResult,categoriesResult,crystalResult]=await Promise.all([adminSupabase.from("site_settings").select("setting_key,setting_value"),adminSupabase.from("categories").select("id,name,slug,type,is_active,sort_order").eq("type","blog").eq("is_active",true).order("sort_order"),adminSupabase.from("crystals").select("id,name,color").eq("is_active",true).order("sort_order").order("created_at",{ascending:false})]); if(settingsResult.error){fail(settingsResult.error.message);setLoading(false);return;} if(categoriesResult.error){fail(categoriesResult.error.message);setLoading(false);return;} if(crystalResult.error){fail(crystalResult.error.message);setLoading(false);return;} const next={...defaults}; for(const r of settingsResult.data||[]){if(r.setting_key)next[r.setting_key]=r.setting_value??"";} setForm(next); setBlogCategories((categoriesResult.data||[]) as {id:string;name:string;slug:string}[]); setCrystalOptions((crystalResult.data||[]) as {id:string;name:string;color?:string|null}[]); setLoading(false);})()},[fail]);
   const set=(k:string,v:string)=>setForm((x:Row)=>({...x,[k]:v}));
   const selectedArticleCategories=()=>{try{const v=JSON.parse(form.crystal_article_categories_json||"[]"); return Array.isArray(v)?v.map(String):[];}catch{return []}};
   const setSelectedArticleCategories=(values:string[])=>set("crystal_article_categories_json",JSON.stringify(values));
@@ -611,7 +612,30 @@ function CrystalPageEditor({notify,fail}:{notify:(s:string)=>void;fail:(s:string
       <Field label="頁面標題" value={form.crystal_page_title} onChange={v=>set("crystal_page_title",v)}/>
       <TextArea label="頁面說明" value={form.crystal_page_description} onChange={v=>set("crystal_page_description",v)} full/>
       <div className="form-section-title">生命靈數 1～9</div>
-      {Array.from({length:9},(_,i)=>i+1).map(n=><div key={n} className="settings-number-card"><strong>生命靈數 {n}</strong><Field label="卡片標題" value={form[`life_${n}_title`]} onChange={v=>set(`life_${n}_title`,v)}/><Field label="卡片小字" value={form[`life_${n}_subtitle`]} onChange={v=>set(`life_${n}_subtitle`,v)}/><a className="number-content-edit" href={`/admin/crystal/number/${n}`}>編輯生命靈數 {n} 內容頁 →</a></div>)}
+      {Array.from({length:9},(_,i)=>i+1).map(n=><div key={n} className="settings-number-card">
+        <strong>生命靈數 {n}</strong>
+        <Field label="卡片標題" value={form[`life_${n}_card_title`] ?? form[`life_${n}_title`]} onChange={v=>set(`life_${n}_card_title`,v)}/>
+        <Field label="卡片小字" value={form[`life_${n}_card_subtitle`] ?? form[`life_${n}_subtitle`]} onChange={v=>set(`life_${n}_card_subtitle`,v)}/>
+        <div className="number-detail-fields">
+          <div className="field-help full">以下設定會直接對應「生命靈數 {n}」內容頁最下方的「適合你的水晶」區塊。</div>
+          <Field label="內容頁標題" value={form[`life_${n}_title`]} onChange={v=>set(`life_${n}_title`,v)}/>
+          <Field label="內容頁小字" value={form[`life_${n}_subtitle`]} onChange={v=>set(`life_${n}_subtitle`,v)}/>
+          <Field label="適合你的水晶小標" value={form[`life_${n}_crystal_kicker`] || `生命靈數 ${n}`} onChange={v=>set(`life_${n}_crystal_kicker`,v)}/>
+          <Field label="適合你的水晶標題" value={form[`life_${n}_crystal_title`] || "適合你的水晶"} onChange={v=>set(`life_${n}_crystal_title`,v)}/>
+          <TextArea label="沒有對應水晶時顯示文字" value={form[`life_${n}_crystal_empty`] || `目前尚未設定生命靈數 ${n} 的對應水晶。`} onChange={v=>set(`life_${n}_crystal_empty`,v)} full/>
+          <div className="crystal-number-picker full">
+            <strong>對應水晶（可複選）</strong>
+            <div className="crystal-number-picker-list">
+              {crystalOptions.length ? crystalOptions.map(c=>{
+                let selected:string[]=[]; try{const parsed=JSON.parse(form[`life_${n}_crystal_ids`]||"[]"); if(Array.isArray(parsed)) selected=parsed.map(String);}catch{}
+                const checked=selected.includes(c.id);
+                return <label className="crystal-number-option" key={c.id}><input type="checkbox" checked={checked} onChange={()=>{const next=checked?selected.filter(id=>id!==c.id):[...selected,c.id];set(`life_${n}_crystal_ids`,JSON.stringify(next));}}/><span><b>{c.name}</b>{c.color?`｜${c.color}`:""}</span></label>;
+              }):<p className="muted">目前沒有啟用中的水晶資料。</p>}
+            </div>
+          </div>
+          <a className="number-content-edit" href={`/admin/crystal/number/${n}`}>進入生命靈數 {n} 完整內容編輯器 →</a>
+        </div>
+      </div>)}
       <div className="form-section-title">Crystal 中間文章區塊</div>
       <div className="crystal-section-picker">
         <div className="crystal-section-picker-head"><strong>選擇要顯示的文章分類</strong><button type="button" className="secondary" onClick={addArticleCategory} disabled={!blogCategories.some(c=>!selectedArticleCategories().includes(c.slug))}>＋新增分類區塊</button></div>
