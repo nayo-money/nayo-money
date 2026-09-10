@@ -27,10 +27,27 @@ export default async function LifeNumberPage({ params }: { params: Promise<{ num
 
   const title = settings[`life_${safeNumber}_title`] || `生命靈數 ${safeNumber}`;
   const subtitle = settings[`life_${safeNumber}_subtitle`] || "查看對應水晶";
-  const matching = crystals.filter(c => {
-    const text = `${c.life_numbers || ""} ${c.missing_numbers || ""}`;
-    return text.split(/[,，\s、/]+/).map(x => x.trim()).includes(String(safeNumber));
-  });
+  const crystalKicker = settings[`life_${safeNumber}_crystal_kicker`] || `生命靈數 ${safeNumber}`;
+  const crystalTitle = settings[`life_${safeNumber}_crystal_title`] || "適合你的水晶";
+  const crystalEmpty = settings[`life_${safeNumber}_crystal_empty`] || `目前尚未設定生命靈數 ${safeNumber} 的對應水晶。你可以到後台「水晶」資料設定生命靈數。`;
+  let matching: Crystal[] = [];
+  try {
+    const ids = JSON.parse(settings[`life_${safeNumber}_crystal_ids`] || "[]");
+    if (Array.isArray(ids) && ids.length) {
+      const idSet = new Set(ids.map(String));
+      matching = crystals.filter(c => idSet.has(String(c.id)));
+    } else {
+      matching = crystals.filter(c => {
+        const text = `${c.life_numbers || ""} ${c.missing_numbers || ""}`;
+        return text.split(/[,，\s、/]+/).map(x => x.trim()).includes(String(safeNumber));
+      });
+    }
+  } catch {
+    matching = crystals.filter(c => {
+      const text = `${c.life_numbers || ""} ${c.missing_numbers || ""}`;
+      return text.split(/[,，\s、/]+/).map(x => x.trim()).includes(String(safeNumber));
+    });
+  }
 
   return (
     <main className="container page life-number-page">
@@ -45,8 +62,8 @@ export default async function LifeNumberPage({ params }: { params: Promise<{ num
       )}
 
       <section className="life-number-detail" id="life-detail">
-        <div className="section-kicker">生命靈數 {safeNumber}</div>
-        <h2>適合你的水晶</h2>
+        <div className="section-kicker">{crystalKicker}</div>
+        <h2>{crystalTitle}</h2>
         {matching.length ? (
           <div className="life-crystal-grid">
             {matching.map(c => (
@@ -61,7 +78,7 @@ export default async function LifeNumberPage({ params }: { params: Promise<{ num
             ))}
           </div>
         ) : (
-          <div className="empty-state">目前尚未設定生命靈數 {safeNumber} 的對應水晶。你可以到後台「水晶」資料設定生命靈數。</div>
+          <div className="empty-state">{crystalEmpty}</div>
         )}
       </section>
 
