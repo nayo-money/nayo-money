@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 
 import "./globals.css";
 
@@ -61,6 +62,18 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="zh-Hant-TW">
       <body>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-2GRZCJBR7G"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){window.dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-2GRZCJBR7G');
+          `}
+        </Script>
         <Header />
         {children}
         <Footer />
