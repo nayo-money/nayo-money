@@ -67,7 +67,7 @@ export default async function Home() {
         <Link className="more" href="/promotions">看全部優惠 →</Link>
       </div>
       <div className="promo-carousel-wrap">
-        <div className="carousel-hint mobile-swipe-hint">← 左右滑動查看更多作品 →</div>
+        <div className="carousel-hint mobile-swipe-hint">← 左右滑動查看更多優惠 →</div>
         <div className="promo-carousel">
         {!displayPromotions.length && <p className="carousel-hint">目前還沒有信用卡優惠，請到後台「信用卡優惠」新增。</p>}
         {displayPromotions.map((card) => <article className="promo-card" key={card.id}>
@@ -103,7 +103,7 @@ export default async function Home() {
         <div><div className="section-kicker">LATEST BLOG</div><div className="section-title">最近的文章</div></div>
         <Link className="more" href="/blog">看全部文章 →</Link>
       </div>
-      <div className="carousel-hint mobile-swipe-hint">← 左右滑動查看更多作品 →</div>
+      <div className="carousel-hint mobile-swipe-hint">← 左右滑動查看更多文章 →</div>
       <div className="article-grid">
         {!displayPosts.length && <p className="carousel-hint">目前還沒有已發布文章，請到後台「Blog 文章」新增。</p>}
         {displayPosts.map((p: any) => <article className="article" key={p.id}>
