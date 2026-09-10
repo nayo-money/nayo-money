@@ -129,12 +129,19 @@ export default async function Home() {
       <div className="carousel bracelet-carousel">
         {!displayProducts.length && <p className="carousel-hint">目前還沒有商品，請到後台「商品」新增。</p>}
         {displayProducts.map((p: any) => <article className="crystal-card" key={p.id}>
-          <div className="crystal-art">{p.image_url ? <img src={p.image_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18 }} /> : "✦"}</div>
+          {p.instagram_url ? (
+            <a className="product-image-link" href={p.instagram_url} target="_blank" rel="noreferrer" aria-label={`在 Instagram 查看${p.name}`}>
+              <div className="crystal-art">{p.image_url ? <img src={p.image_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18 }} /> : "✦"}</div>
+            </a>
+          ) : (
+            <div className="crystal-art">{p.image_url ? <img src={p.image_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18 }} /> : "✦"}</div>
+          )}
           {p.category && <div className="crystal-num">{p.category}</div>}
           {p.missing_numbers && <div className="crystal-num">缺數 {p.missing_numbers}</div>}
           <div className="crystal-name">{p.name}</div>
           <div className="crystal-desc">{p.description || ""}</div>
-          {p.purchase_url && <a className="promo-button" href={p.purchase_url} target="_blank" rel="noreferrer">查看作品 →</a>}
+          {p.price && <div className="product-price">{p.price}</div>}
+          {p.purchase_url && <a className="promo-button" href={p.purchase_url} target="_blank" rel="noreferrer">購買商品 →</a>}
         </article>)}
       </div>
     </section>
