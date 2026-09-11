@@ -448,14 +448,30 @@
     flex-basis:88vw;
     width:88vw;
     max-width:390px;
-    margin-left:auto;
-    margin-right:auto;
+    margin-left:0;
+    margin-right:0;
   }
   .article-grid{
-    display:block;
+    display:flex;
+    flex-wrap:nowrap;
+    gap:18px;
     width:100%;
     margin-left:0;
     margin-right:0;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scroll-snap-type:x mandatory;
+    scrollbar-width:none;
+    padding:4px 0 18px;
+  }
+  .article-grid::-webkit-scrollbar{display:none;}
+  .article-grid .article{
+    flex:0 0 88vw;
+    scroll-snap-align:start;
+  }
+  .article-carousel-hint{
+    text-align:center;
+    margin:-8px 0 10px;
   }
 }
 
