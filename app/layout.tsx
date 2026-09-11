@@ -69,7 +69,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <Script id="google-analytics" strategy="beforeInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
-            function gtag(){window.dataLayer.push(arguments);}
+            function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'G-2GRZCJBR7G');
           `}
