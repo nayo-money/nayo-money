@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HorizontalScroller } from "@/components/horizontal-scroll";
 import { createClient } from "@/lib/supabase/server";
 
 export const revalidate = 60;
@@ -67,7 +68,7 @@ export default async function Home() {
         <Link className="more" href="/promotions">看全部優惠 →</Link>
       </div>
       <div className="promo-carousel-wrap">
-        <div className="promo-carousel">
+        <HorizontalScroller className="promo-carousel">
         {!displayPromotions.length && <p className="carousel-hint">目前還沒有信用卡優惠，請到後台「信用卡優惠」新增。</p>}
         {displayPromotions.map((card) => <article className="promo-card" key={card.id}>
           <div className="promo-top">
@@ -91,7 +92,7 @@ export default async function Home() {
           {card.deadline && <div className="promo-deadline-row"><span className="promo-deadline"><svg className="promo-calendar-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path d="M7 3.5v4M17 3.5v4M3.5 9.5h17" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><path d="M7.5 13h.01M12 13h.01M16.5 13h.01M7.5 16.5h.01M12 16.5h.01" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>期限：{card.deadline}</span></div>}
           <a className="promo-button" href={card.url}>{card.button_text || "立即申辦"} ↗</a>
         </article>)}
-        </div>
+        </HorizontalScroller>
         {displayPromotions.length > 1 && <div className="promo-scroll-indicator" aria-hidden="true"><span className="promo-scroll-arrows">‹&nbsp;›</span><span>左右滑動</span></div>}
       </div>
     </section>
@@ -103,7 +104,7 @@ export default async function Home() {
         <Link className="more" href="/blog">看全部文章 →</Link>
       </div>
       <div className="carousel-hint article-carousel-hint">← 左右滑動查看更多文章 →</div>
-      <div className="article-grid">
+      <HorizontalScroller className="article-grid">
         {!displayPosts.length && <p className="carousel-hint">目前還沒有已發布文章，請到後台「Blog 文章」新增。</p>}
         {displayPosts.map((p: any) => <article className="article" key={p.id}>
           <div className="article-cover">{p.cover_image ? <img src={p.cover_image} alt={p.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "Nayo Blog"}</div>
@@ -114,7 +115,7 @@ export default async function Home() {
             {p.slug && <Link className="more" href={`/blog/${p.slug}`}>閱讀 →</Link>}
           </div>
         </article>)}
-      </div>
+      </HorizontalScroller>
     </section>
 
     {/* 商品橫向卡片 */}
@@ -127,7 +128,7 @@ export default async function Home() {
         <Link className="more" href="/crystal#products">看全部商品 →</Link>
       </div>
       <div className="carousel-hint">← 左右滑動查看更多作品 →</div>
-      <div className="carousel bracelet-carousel">
+      <HorizontalScroller className="carousel bracelet-carousel">
         {!displayProducts.length && <p className="carousel-hint">目前還沒有商品，請到後台「商品」新增。</p>}
         {displayProducts.map((p: any) => <article className="crystal-card" key={p.id}>
           {p.instagram_url ? (
@@ -144,7 +145,7 @@ export default async function Home() {
           {p.price && <div className="product-price">{p.price}</div>}
           {p.purchase_url && <a className="promo-button" href={p.purchase_url} target="_blank" rel="noreferrer">購買商品 →</a>}
         </article>)}
-      </div>
+      </HorizontalScroller>
     </section>
 
     {/* 下方內容保留 */}
