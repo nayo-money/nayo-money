@@ -16,6 +16,13 @@ export function HorizontalScroller({ children, className = "" }: HorizontalScrol
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
+
+    // Interactive elements inside a card (especially the application CTA)
+    // must keep their normal click behavior. Only start drag when the user
+    // presses a non-interactive part of the scroll rail.
+    const target = e.target as HTMLElement;
+    if (target.closest("a,button,input,textarea,select,[role=button]")) return;
+
     const el = ref.current;
     if (!el || el.scrollWidth <= el.clientWidth) return;
 
