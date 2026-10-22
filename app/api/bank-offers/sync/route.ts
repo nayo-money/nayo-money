@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
 }
 function updateErrorText(status: number) { return status >= 200 && status < 300 ? `HTTP ${status}` : `HTTP ${status}`; }
 
-\nexport async function GET() {
+
+export async function GET() {
   return NextResponse.json(
     { service: "NayoMoney official bank offer collector", method: "POST", authentication: "Bearer token required", note: "This endpoint collects candidate source text only. It does not verify or publish card benefits." },
     { status: 200 }
