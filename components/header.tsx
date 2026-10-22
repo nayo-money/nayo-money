@@ -5,6 +5,7 @@ type MenuItem = { id:string; label:string; url:string; children?: MenuItem[] };
 
 const DEFAULT_MENU: MenuItem[] = [
   {id:"home",label:"首頁",url:"/",children:[]},
+  {id:"quick-card",label:"快速選卡",url:"/quick-card",children:[]},
   {id:"blog",label:"理財 Blog",url:"/blog",children:[
     {id:"blog-all",label:"全部文章",url:"/blog"},
     {id:"blog-credit",label:"信用卡回饋",url:"/blog?category=credit-card"},
@@ -29,6 +30,9 @@ export async function Header() {
     const {data}=await supabase.from("site_settings").select("setting_key,setting_value");
     for(const row of data||[]) if(row.setting_key) s[row.setting_key]=row.setting_value??"";
     if(s.menu_json){try{const parsed=JSON.parse(s.menu_json);if(Array.isArray(parsed))menu=parsed}catch{}}
+  }
+  if (!menu.some((item) => item.url === "/quick-card" || item.id === "quick-card")) {
+    menu = [menu[0], { id: "quick-card", label: "快速選卡", url: "/quick-card", children: [] }, ...menu.slice(1)];
   }
   return <header className="site-header"><nav className="nav">
     <Link href="/" className="brand" aria-label={`${s.site_name}首頁`}>

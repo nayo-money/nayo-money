@@ -1,0 +1,30 @@
+"use client";
+import { useMemo, useState } from "react";
+export type QuickCard = { id:string; category?:string|null; bank?:string|null; badge?:string|null; title:string; subtitle?:string|null; image?:string|null; bullets?:string[]|null; gifts?:string[]|null; gift_title?:string|null; eligibility?:string|null; conditions?:string[]|null; deadline?:string|null; url?:string|null; button_text?:string|null; sort_order?:number|null };
+const popular=["蝦皮","momo","全聯","家樂福","加油","外送","Apple Pay","日本旅遊","海外消費","超商"];
+const regions=["台灣","日本","韓國","美國","歐盟","其他"];
+const payments=["不限","LINE Pay","Apple Pay","街口支付","悠遊付","icash","OPEN錢包"];
+const allText=(c:QuickCard)=>[c.title,c.bank,c.category,c.badge,c.subtitle,c.gift_title,c.eligibility,...(c.bullets||[]),...(c.gifts||[]),...(c.conditions||[])].filter(Boolean).join(" ").toLowerCase();
+export default function QuickCardFinder({cards}:{cards:QuickCard[]}) {
+ const [keyword,setKeyword]=useState(""); const [amount,setAmount]=useState(""); const [region,setRegion]=useState("台灣"); const [payment,setPayment]=useState("不限"); const [newOnly,setNewOnly]=useState(false); const [expanded,setExpanded]=useState<string|null>(null);
+ const results=useMemo(()=>cards.filter(c=>{
+   const t=allText(c).replace(/\s/g,""); const q=keyword.trim().toLowerCase().replace(/\s/g,"");
+   const aliases:Record<string,string>={"蝦皮":"蝦皮|shopee","加油":"加油|汽油|中油|台塑","外送":"外送|foodpanda|ubereats","全聯":"全聯|pxmart","applepay":"applepay|apple pay","momo":"momo","家樂福":"家樂福|carrefour"};
+   const match=!q||t.includes(q)||new RegExp(aliases[q]||"(?!)","i").test(t);
+   const regionMatch=region==="台灣"||region==="其他"||t.includes(region.toLowerCase());
+   const pay=payment==="不限"||t.includes(payment.toLowerCase().replace(/\s/g,""));
+   const fresh=!newOnly||/新戶|新卡友|首次申辦/.test(allText(c));
+   return match&&regionMatch&&pay&&fresh;
+ }),[cards,keyword,region,payment,newOnly]);
+ return <main className="container page quick-card-page">
+  <section className="quick-hero"><div><div className="eyebrow">NAYOMONEY · FIND YOUR CARD</div><h1>快速選卡 <span>✳</span></h1><p className="quick-lead">輸入你的消費關鍵字，快速找到適合的信用卡。</p><p className="quick-desc">依通路與支付方式篩選優惠，並直接前往各卡申辦頁面。</p></div><div className="quick-art" aria-hidden="true"><span>Everyday<br/>Rewards</span><i>✳</i></div></section>
+  <section className="quick-filter-panel"><form className="quick-search" onSubmit={e=>e.preventDefault()}><span>⌕</span><input aria-label="搜尋消費通路" value={keyword} onChange={e=>setKeyword(e.target.value)} placeholder="搜尋關鍵字：如蝦皮、全聯、加油、外送、Apple、momo…"/>{keyword&&<button type="button" onClick={()=>setKeyword("")}>清除</button>}<button className="quick-search-button">搜尋</button></form>
+  <div className="quick-filter-grid"><label>預估消費金額（選填）<div className="quick-amount"><span>NT$</span><input type="number" min="0" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="5,000"/></div></label>
+  <div><b>消費地區</b><div className="quick-pills">{regions.map(r=><button type="button" key={r} className={region===r?"selected":""} onClick={()=>setRegion(r)}>{r}</button>)}</div></div>
+  <div className="quick-payment"><b>支付方式（選填）</b><div className="quick-pills">{payments.map(p=><button type="button" key={p} className={payment===p?"selected":""} onClick={()=>setPayment(p)}>{p}</button>)}</div></div>
+  <label className="quick-new"><input type="checkbox" checked={newOnly} onChange={e=>setNewOnly(e.target.checked)}/>只顯示新戶優惠</label></div>
+  <div className="quick-popular"><span>熱門關鍵字</span>{popular.map(p=><button type="button" key={p} onClick={()=>setKeyword(p)}>{p}</button>)}</div></section>
+  <section className="quick-results"><div className="quick-results-head"><div><h2>找到 {results.length} 筆相關優惠</h2><p>實際回饋依銀行公告及個人資格為準。</p><p className="quick-disclaimer">本網站信用卡回饋資訊及選卡結果僅供參考。實際回饋比例、適用條件、回饋上限、活動期間及排除項目，請以各銀行官方公告與最新活動條款為準。信用卡優惠可能隨時調整，申辦前請務必至銀行官方網站確認最新資訊。</p></div></div>
+  {results.length?<div className="quick-card-list">{results.map((c,i)=>{const cond=[...(c.eligibility?[c.eligibility]:[]),...(c.conditions||[]),...(c.gifts||c.bullets||[])].filter(Boolean);const valid=c.url&&/^https?:\/\//i.test(c.url)&&c.url!=="#";return <article className="quick-result-card" key={c.id}><div className="quick-rank">{i+1}</div><div className="quick-card-image">{c.image?<img src={c.image} alt={c.title}/>:<span>信用卡</span>}</div><div className="quick-card-main"><div className="quick-tags">{c.bank&&<span>{c.bank}</span>}{c.badge&&<span>{c.badge}</span>}{c.category&&<span>{c.category}</span>}</div><h3>{c.title}</h3><p>{c.subtitle||c.gift_title||"查看優惠條件與適用通路"}</p><button type="button" className="quick-detail" onClick={()=>setExpanded(expanded===c.id?null:c.id)}>{expanded===c.id?"收合條件":"查看優惠條件"}⌄</button>{expanded===c.id&&<div className="quick-conditions">{cond.length?<ul>{cond.map((x,j)=><li key={j}>{x}</li>)}</ul>:<p>請以銀行官方公告為準。</p>}{c.deadline&&<p>活動期限：{c.deadline}</p>}</div>}</div><div className="quick-card-actions"><span>優惠條件請點開確認</span>{valid?<a href={c.url!} target="_blank" rel="sponsored nofollow noopener noreferrer" className="quick-apply">{c.button_text||"前往申辦"} ↗</a>:<span className="quick-apply disabled">申辦連結待設定</span>}</div></article>})}</div>:<div className="empty-state">目前找不到符合的優惠。請換個關鍵字或清除篩選。</div>}
+  {amount&&<p className="quick-note">已輸入 NT${Number(amount).toLocaleString("zh-TW")}。目前資料沒有統一的回饋計算欄位，因此不會顯示未經驗證的預估回饋金額。</p>}</section></main>;
+}
