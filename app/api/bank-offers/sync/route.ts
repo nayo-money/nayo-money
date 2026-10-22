@@ -27,15 +27,17 @@ export async function POST(req: NextRequest) {
       const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
       const title = clean(titleMatch?.[1] || source.bank + " 官方優惠頁").slice(0, 180);
       const channels = KEYWORDS.filter(k => text.toLowerCase().includes(k.toLowerCase()));
+      const sourceStatus = `HTTP ${response.status}`;
       const { error: updateError } = await db.from("bank_offer_sources")
-        .update({ last_checked_at: new Date().toISOString(), last_status: updateErrorText(response.status) })
+        .update({ last_checked_at: new Date().toISOString(), last_status: sourceStatus })
         .eq("id", source.id);
-      if (updateError) throw new Error("Failed to update source status");
+      if (updateError) throw new Error(`Failed to update source status: ${updateError.message}`);
       // Candidate only: raw text and inferred keywords are NOT published as confirmed card benefits.
       const { error: candidateError } = await db.from("bank_offer_candidates").upsert({
         source_id: source.id, bank: source.bank, title, source_url: source.source_url,
         extracted_text: text.slice(0, 30000), detected_keywords: channels,
-        fetched_at: new Date().toISOString(), review_status: "pending", fetch_status: "ok"
+        fetched_at: new Date().toISOString(), review_status: "pending", fetch_status: "ok",
+        reviewer_notes: "自動擷取候選；尚未核實卡別、回饋比例、上限、期限與排除條件。請開啟官方來源逐項確認。"
       }, { onConflict: "source_id,source_url" });
       if (candidateError) throw new Error(candidateError.message);
       results.push({ bank: source.bank, status: "candidate_saved", detected_keywords: channels.length });
